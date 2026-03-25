@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+.env
+.git
+.gitignore
+*.db
+*.sqlite
+.vscode
+.idea
+tests/
+docs/
+*.md
+alembic/versions/*.py
+!alembic/versions/__init__.py

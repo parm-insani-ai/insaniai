@@ -1,0 +1,159 @@
+"""
+AI Router -- Secure Claude API proxy with caching, token management,
+and integration data injection.
+
+POST /v1/ai/ask -- Non-streaming. Checks cache first, manages token budget.
+Rate limited to 20/minute per IP.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+import structlog
+
+from app.db import get_db
+from app.models.db_models import Project, ChatSession
+from app.models.schemas_chat import AiAskRequest, AiAskResponse
+from app.services import chat_service, ai_service, cache_service, token_service, document_service
+from app.middleware.auth import require_auth_context, AuthContext
+
+limiter = Limiter(key_func=get_remote_address)
+router = APIRouter(prefix="/v1/ai", tags=["AI"])
+logger = structlog.get_logger()
+
+
+@router.post("/ask", response_model=AiAskResponse)
+@limiter.limit("20/minute")
+async def ask(
+    request: Request,
+    body: AiAskRequest,
+    ctx: AuthContext = Depends(require_auth_context),
+    db: AsyncSession = Depends(get_db),
+):
+    # -- 1. Session + project with tenant isolation --
+    session_id = body.session_id
+
+    if not session_id:
+        title = body.message[:50] + "..." if len(body.message) > 50 else body.message
+        session = await chat_service.create_session(db, ctx.user_id, body.project_id, title, ctx.org_id)
+        session_id = session.id
+    else:
+        result = await db.execute(
+            select(ChatSession).where(
+                ChatSession.id == session_id,
+                ChatSession.user_id == ctx.user_id,
+                ChatSession.org_id == ctx.org_id,
+            )
+        )
+        if not result.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Session not found")
+
+    result = await db.execute(
+        select(Project).where(
+            Project.id == body.project_id,
+            Project.org_id == ctx.org_id,
+        )
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project_data = project.data_json or {}
+
+    # -- Load project documents for citation-aware responses --
+    doc_context = ""
+    project_docs = await document_service.get_project_documents(db, body.project_id, ctx.org_id)
+    ready_docs = [d for d in project_docs if d.status == "ready"]
+    if ready_docs:
+        loaded_docs = []
+        for d in ready_docs[:10]:
+            full_doc = await document_service.get_document_with_pages(db, d.id, ctx.org_id)
+            if full_doc:
+                loaded_docs.append(full_doc)
+        doc_context = document_service.build_document_context(loaded_docs)
+
+    # -- Load synced data from integrations (emails, invoices, etc.) --
+    try:
+        from app.integrations.sync_service import get_synced_items_for_project, build_synced_data_context
+        synced_items = await get_synced_items_for_project(db, ctx.org_id, None, limit=100)
+        if synced_items:
+            synced_context = build_synced_data_context(synced_items)
+            if doc_context:
+                doc_context = doc_context + "\n\n" + synced_context
+            else:
+                doc_context = synced_context
+            logger.info("synced_data_injected", items=len(synced_items))
+    except Exception as e:
+        logger.warning("synced_data_load_error", error=str(e))
+
+    # -- 2. Check cache (skip if files attached) --
+    cached_response = None
+    if not body.files:
+        cached_response = await cache_service.get_cached_response(db, body.project_id, body.message)
+
+    if cached_response:
+        logger.info("cache_hit", project_id=body.project_id, query=body.message[:50])
+        formatted = cached_response
+
+        file_meta = [{"name": f.get("name", "file")} for f in body.files] if body.files else []
+        await chat_service.save_message(db, session_id, "user", body.message, file_meta)
+        await chat_service.save_message(db, session_id, "assistant", formatted)
+
+    else:
+        # -- 3. Token budget check --
+        history = await chat_service.get_conversation_history(db, session_id, limit=20)
+        if history and history[-1]["role"] == "user":
+            history = history[:-1]
+
+        budget = token_service.check_context_budget(project_data, history, body.message)
+
+        if not budget["fits"]:
+            logger.warning("token_budget_exceeded", total=budget["total_tokens"], recommendation=budget["recommendation"])
+
+            if budget["recommendation"] == "truncate_project_data":
+                project_data = token_service.truncate_project_data(project_data, token_service.MAX_SYSTEM_TOKENS)
+            elif budget["recommendation"] == "truncate_history":
+                max_hist_tokens = token_service.MAX_CONTEXT_TOKENS - budget["system_tokens"] - budget["message_tokens"] - token_service.RESPONSE_RESERVE
+                history = token_service.truncate_history(history, max_hist_tokens)
+            else:
+                project_data = token_service.truncate_project_data(project_data, token_service.MAX_SYSTEM_TOKENS // 2)
+                history = token_service.truncate_history(history, 5000)
+
+        # Save user message
+        file_meta = [{"name": f.get("name", "file")} for f in body.files] if body.files else []
+        await chat_service.save_message(db, session_id, "user", body.message, file_meta)
+
+        # -- Call Claude --
+        try:
+            raw = await ai_service.ask_claude(
+                message=body.message,
+                project_data=project_data,
+                conversation_history=history,
+                files=body.files or None,
+                document_context=doc_context,
+            )
+        except RuntimeError as e:
+            await chat_service.save_message(db, session_id, "assistant", f"Error: {str(e)}")
+            raise HTTPException(status_code=502, detail=str(e))
+
+        formatted = ai_service.format_response(raw)
+
+        # Save AI response with token count
+        response_tokens = token_service.estimate_tokens(raw)
+        msg = await chat_service.save_message(db, session_id, "assistant", formatted)
+        msg.token_count = response_tokens
+
+        # -- Cache the response (only for non-file queries) --
+        if not body.files:
+            await cache_service.store_cached_response(
+                db, body.project_id, body.message, formatted, response_tokens
+            )
+
+    # -- 4. Return --
+    result = await db.execute(select(ChatSession.title).where(ChatSession.id == session_id))
+    row = result.one_or_none()
+    title = row.title if row else "Chat"
+
+    return AiAskResponse(session_id=session_id, response=formatted, title=title)

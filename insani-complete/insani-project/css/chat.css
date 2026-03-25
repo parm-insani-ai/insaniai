@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════
+   CHAT — Chat-specific styles.
+   
+   Message rows, avatars, bubbles (user vs AI), 
+   citation tags, risk/action boxes, typing dots,
+   searching animation, and the welcome screen.
+   ═══════════════════════════════════════════════ */
+
+/* ── Welcome screen (shown before first message) ── */
+.welcome {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 2rem 1rem;
+}
+.welcome-mark {
+  width: 52px; height: 52px;
+  background: var(--text); border-radius: 14px;
+  display: grid; place-items: center;
+  margin-bottom: 1.75rem;
+}
+.welcome-mark::after {
+  content: ''; width: 18px; height: 18px;
+  border: 3px solid var(--bg-chat); border-radius: 50%;
+}
+.welcome h2 {
+  font-family: var(--heading); font-size: 1.65rem;
+  font-weight: 400; letter-spacing: -0.02em;
+  margin-bottom: 0.4rem; color: var(--text);
+}
+.welcome p {
+  color: var(--text-muted); font-size: 0.9rem;
+  max-width: 380px; line-height: 1.55;
+  margin-bottom: 2.25rem; font-weight: 300;
+}
+
+/* ── Quick action starters ── */
+.starters {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem; max-width: 520px; width: 100%;
+}
+.starter {
+  padding: 0.75rem 0.9rem;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; text-align: left;
+  cursor: pointer; transition: all 0.15s;
+  font-family: var(--body);
+  display: flex; align-items: flex-start; gap: 0.65rem;
+}
+.starter:hover { border-color: var(--border-strong); background: var(--surface); }
+.starter-icon {
+  width: 32px; height: 32px;
+  background: var(--surface); border-radius: 8px;
+  display: grid; place-items: center;
+  flex-shrink: 0; color: var(--text-secondary);
+}
+.starter:hover .starter-icon { background: var(--surface-hover); color: var(--text); }
+.starter-title { font-size: 0.78rem; font-weight: 500; color: var(--text); margin-bottom: 0.15rem; }
+.starter-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 300; }
+
+/* ── Message rows ── */
+.msg {
+  display: flex; gap: 0.75rem;
+  animation: fadeUp 0.3s ease both;
+}
+.msg.user { flex-direction: row-reverse; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Avatars ── */
+.msg-av {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center;
+  flex-shrink: 0; font-size: 0.65rem;
+  font-weight: 600; margin-top: 2px;
+}
+.msg-av.ai { background: var(--text); position: relative; }
+.msg-av.ai::after {
+  content: ''; width: 9px; height: 9px;
+  border: 2px solid var(--bg-chat); border-radius: 50%;
+}
+.msg-av.human {
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* ── Bubbles ── */
+.msg-body { max-width: 620px; }
+.bubble {
+  padding: 0.85rem 1.05rem; border-radius: var(--radius);
+  font-size: 0.87rem; line-height: 1.65; font-weight: 400;
+}
+.user .bubble {
+  background: var(--text); color: var(--bg);
+  border-radius: var(--radius) var(--radius) 4px var(--radius);
+}
+.ai .bubble {
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius) var(--radius) var(--radius) 4px;
+}
+.ai .bubble strong { color: var(--text); font-weight: 600; }
+
+/* ── Citation tags (inline in AI responses) ── */
+.cite {
+  display: inline-flex; align-items: center;
+  font-family: var(--mono); font-size: 0.65rem;
+  padding: 0.1rem 0.4rem; border-radius: 4px;
+  vertical-align: middle; margin: 0 0.1rem;
+  cursor: pointer; transition: all 0.15s;
+}
+.cite-default { background: var(--accent-soft); color: var(--text-secondary); border: 1px solid var(--border); }
+.cite-blue { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue-border); }
+.cite-orange { background: var(--orange-soft); color: var(--orange); border: 1px solid rgba(217,119,6,0.15); }
+.cite:hover { filter: brightness(0.95); }
+
+/* ── Risk box (red, shown when AI identifies risks) ── */
+.risk-box {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--red-soft); border: 1px solid var(--red-border);
+  border-radius: 10px; margin-top: 0.65rem;
+  font-size: 0.82rem; color: var(--text-secondary);
+}
+.risk-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
+
+/* ── Action box (green, shown when AI recommends actions) ── */
+.action-box {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--green-soft); border: 1px solid var(--green-border);
+  border-radius: 10px; margin-top: 0.65rem;
+  font-size: 0.82rem; color: var(--text-secondary);
+}
+
+/* ── File tags in messages ── */
+.msg-files { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.45rem; }
+.msg-ftag {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px; font-family: var(--mono); font-size: 0.65rem;
+}
+.ai .msg-ftag {
+  background: var(--blue-soft); border-color: var(--blue-border); color: var(--blue);
+}
+
+/* ── Searching / typing indicator ── */
+.searching-bar {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0; font-size: 0.72rem;
+  color: var(--text-dim); flex-wrap: wrap;
+}
+.s-tag {
+  padding: 0.15rem 0.45rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; font-family: var(--mono);
+  font-size: 0.65rem; color: var(--text-muted);
+  animation: tagIn 0.25s ease both;
+}
+@keyframes tagIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.dots { display: flex; gap: 0.3rem; padding: 0.75rem 0; }
+.dot {
+  width: 6px; height: 6px;
+  background: var(--text-muted); border-radius: 50%;
+  animation: bounce 1.4s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: 0.15s; }
+.dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.25; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}

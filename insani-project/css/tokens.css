@@ -1,0 +1,82 @@
+/* ═══════════════════════════════════════════════
+   TOKENS — Design tokens for the insani app.
+   
+   Every color, font, size, and radius used in the
+   app is defined here. Change the brand here and 
+   it cascades everywhere. Never hardcode values
+   in other CSS files.
+   ═══════════════════════════════════════════════ */
+
+:root {
+  /* ── Backgrounds ── */
+  --bg: #fafaf8;              /* Page background */
+  --bg-sidebar: #f1f0ed;      /* Sidebar background */
+  --bg-chat: #ffffff;          /* Chat area / panels */
+  --bg-input: #f5f5f2;        /* Input field background */
+
+  /* ── Surfaces (interactive areas, hover states) ── */
+  --surface: #eeeee9;
+  --surface-hover: #e6e6e0;
+
+  /* ── Borders ── */
+  --border: rgba(0,0,0,0.07);        /* Default border */
+  --border-strong: rgba(0,0,0,0.12);  /* Emphasized border */
+
+  /* ── Text ── */
+  --text: #1a1a1a;              /* Primary text */
+  --text-secondary: #4a4a4a;   /* Body text, AI responses */
+  --text-muted: #8a8a8a;       /* Labels, descriptions */
+  --text-dim: #b0b0b0;         /* Placeholders, timestamps */
+
+  /* ── Accent (primary action color) ── */
+  --accent: #1a1a1a;
+  --accent-soft: rgba(26,26,26,0.06);
+
+  /* ── Semantic colors ── */
+  --green: #22a867;
+  --green-soft: rgba(34,168,103,0.08);
+  --green-border: rgba(34,168,103,0.15);
+
+  --red: #e03e3e;
+  --red-soft: rgba(224,62,62,0.06);
+  --red-border: rgba(224,62,62,0.12);
+
+  --orange: #d97706;
+  --orange-soft: rgba(217,119,6,0.06);
+
+  --blue: #2563eb;
+  --blue-soft: rgba(37,99,235,0.06);
+  --blue-border: rgba(37,99,235,0.12);
+
+  --yellow: #ca8a04;
+
+  /* ── Typography ── */
+  --heading: 'Newsreader', Georgia, serif;   /* Headings, display text */
+  --body: 'Outfit', system-ui, sans-serif;   /* Body text, UI labels */
+  --mono: 'JetBrains Mono', monospace;       /* Code, timestamps, badges */
+
+  /* ── Layout ── */
+  --sidebar-w: 260px;
+  --radius: 12px;
+}
+
+/* ── Reset ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+/* ── Utility classes ── */
+.vh { display: none !important; }   /* View hidden — used to toggle views */

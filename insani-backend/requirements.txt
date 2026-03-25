@@ -1,0 +1,39 @@
+# insani backend — production dependencies
+
+# Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+
+# Database (SQLAlchemy async + Alembic migrations)
+sqlalchemy[asyncio]==2.0.35
+aiosqlite==0.20.0         # SQLite async driver (dev). Swap to asyncpg for PostgreSQL.
+alembic==1.13.0
+
+# Auth
+pyjwt==2.9.0
+bcrypt==4.2.0
+python-multipart==0.0.12  # Required for form data / file uploads
+
+# AI
+anthropic==0.39.0
+pypdf==4.3.0         # PDF text extraction for document citations
+
+# Integrations
+cryptography==43.0.0  # Token encryption for OAuth storage
+httpx==0.27.2         # Async HTTP client for integration APIs
+
+# Validation & config
+pydantic[email]==2.9.0    # Includes email-validator
+python-dotenv==1.0.1
+
+# Rate limiting
+slowapi==0.1.9
+
+# Logging
+structlog==24.4.0
+
+# Monitoring (optional — install if using Sentry)
+sentry-sdk[fastapi]==2.14.0
+
+# Backups (optional — install if uploading to S3)
+# boto3==1.35.0

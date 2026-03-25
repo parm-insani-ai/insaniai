@@ -1,0 +1,46 @@
+# ═══════════════════════════════════════════════
+# insani — Docker Compose (local production-like setup)
+#
+# Start:  docker compose up -d
+# Stop:   docker compose down
+# Logs:   docker compose logs -f backend
+# Reset:  docker compose down -v  (deletes database!)
+# ═══════════════════════════════════════════════
+
+services:
+  # ── PostgreSQL ──
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: insani
+      POSTGRES_USER: insani
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-insani_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insani"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Backend API ──
+  backend:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://insani:${DB_PASSWORD:-insani_dev_password}@db:5432/insani
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

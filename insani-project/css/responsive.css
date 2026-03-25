@@ -1,0 +1,11 @@
+/* ═══════════════════════════════════════════════
+   RESPONSIVE — Breakpoint overrides.
+   
+   Single breakpoint at 900px for tablet/mobile.
+   Shows hamburger menu, adjusts grid columns.
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .menu-btn { display: grid !important; }
+  .dash-grid { grid-template-columns: repeat(2, 1fr); }
+}

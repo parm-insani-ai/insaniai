@@ -1,0 +1,84 @@
+/* ═══ DASHBOARD ═══ */
+
+.dash-page { max-width:900px; margin:0 auto; padding:1.8rem 2rem 4rem; animation:fadeUp .3s ease both; }
+
+.dash-back-btn { display:inline-flex; align-items:center; gap:.35rem; font-size:.85rem; color:var(--text-muted); cursor:pointer; margin-bottom:1.2rem; transition:all .15s; background:none; border:1px solid var(--border); border-radius:7px; padding:.4rem .8rem .4rem .6rem; font-family:var(--body); }
+.dash-back-btn:hover { color:var(--text); border-color:var(--border-strong); background:var(--surface); }
+
+.dash-pg-header { margin-bottom:1.6rem; }
+.dash-pg-title { font-family:var(--heading); font-size:1.7rem; font-weight:400; color:var(--text); letter-spacing:-.025em; }
+.dash-pg-sub { font-size:.92rem; color:var(--text-muted); font-weight:300; margin-top:.2rem; }
+
+/* Stat cards */
+.ds-row { display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem; margin-bottom:1.8rem; }
+.ds-card { background:var(--bg-chat); border:1px solid var(--border); border-radius:10px; padding:1rem 1.1rem; position:relative; overflow:hidden; transition:all .15s; }
+.ds-card:hover { border-color:var(--border-strong); }
+.ds-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.ds-card.ds-blue::before { background:var(--blue); }
+.ds-card.ds-green::before { background:var(--green); }
+.ds-card.ds-orange::before { background:var(--orange); }
+.ds-card.ds-dark::before { background:var(--text); }
+.ds-label { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:500; margin-bottom:.5rem; }
+.ds-val { font-family:var(--heading); font-size:1.8rem; font-weight:400; line-height:1; color:var(--text); }
+
+/* Sections */
+.ds-section { margin-bottom:1.8rem; }
+.ds-section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:.6rem; }
+.ds-section-title { font-size:.95rem; font-weight:500; color:var(--text); }
+.ds-section-btn { font-size:.78rem; color:var(--text-muted); cursor:pointer; transition:all .12s; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:.32rem .7rem; font-family:var(--body); font-weight:500; }
+.ds-section-btn:hover { background:var(--surface-hover); border-color:var(--border-strong); color:var(--text); }
+
+/* Integration tiles */
+.ds-integ-list { display:flex; flex-direction:column; gap:.35rem; }
+.ds-tile { display:flex; align-items:center; gap:.75rem; padding:.75rem .95rem; background:var(--bg-chat); border:1px solid var(--border); border-radius:10px; transition:all .15s; border-left:3px solid var(--border); }
+.ds-tile:hover { border-color:var(--border-strong); background:var(--surface); border-left-color:var(--border-strong); }
+.ds-tile.ds-on { border-left-color:var(--green); background:var(--bg-chat); }
+.ds-tile.ds-on:hover { background:var(--green-soft); }
+.ds-tile.ds-off { opacity:.7; border-left-color:var(--border); }
+.ds-tile.ds-off:hover { opacity:1; }
+
+.ds-tile-icon { width:38px; height:38px; min-width:38px; max-width:38px; min-height:38px; max-height:38px; border-radius:9px; display:grid; place-items:center; overflow:hidden; flex-shrink:0; }
+.ds-tile-icon svg { width:18px !important; height:18px !important; max-width:18px; max-height:18px; display:block; }
+
+.ds-tile-info { flex:1; min-width:0; }
+.ds-tile-name { font-size:.88rem; font-weight:500; color:var(--text); }
+.ds-tile-meta { font-size:.75rem; color:var(--text-muted); font-weight:300; margin-top:.1rem; display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+
+.ds-tile-badge { display:inline-flex; align-items:center; gap:.2rem; font-family:var(--mono); font-size:.68rem; padding:.12rem .4rem; border-radius:4px; font-weight:500; }
+.ds-tile-badge.badge-green { background:var(--green-soft); color:var(--green); border:1px solid var(--green-border); }
+.ds-tile-badge.badge-gray { background:var(--surface); color:var(--text-dim); border:1px solid var(--border); }
+.ds-tile-dot { width:4px; height:4px; border-radius:50%; background:var(--border-strong); }
+
+.ds-tile-actions { display:flex; gap:.3rem; flex-shrink:0; }
+
+.ds-btn { padding:.35rem .7rem; border-radius:6px; font-size:.75rem; font-weight:500; font-family:var(--body); cursor:pointer; transition:all .12s; border:none; }
+.ds-btn-dark { background:var(--text); color:var(--bg); }
+.ds-btn-dark:hover { opacity:.8; }
+.ds-btn-light { background:var(--surface); color:var(--text-secondary); border:1px solid var(--border); }
+.ds-btn-light:hover { background:var(--surface-hover); border-color:var(--border-strong); color:var(--text); }
+.ds-btn-ghost { background:none; color:var(--text-dim); font-size:.82rem; padding:.35rem .5rem; }
+.ds-btn-ghost:hover { color:var(--red); }
+.ds-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+/* Data bars */
+.ds-data-list { display:flex; flex-direction:column; gap:.4rem; }
+.ds-data-row { display:flex; align-items:center; gap:.6rem; padding:.45rem 0; }
+.ds-data-label { font-size:.85rem; color:var(--text-secondary); width:120px; flex-shrink:0; }
+.ds-data-bar-wrap { flex:1; height:7px; background:var(--surface); border-radius:3px; overflow:hidden; }
+.ds-data-bar { height:100%; border-radius:3px; transition:width .5s ease; }
+.ds-data-count { font-family:var(--mono); font-size:.78rem; color:var(--text-muted); width:40px; text-align:right; flex-shrink:0; }
+
+/* Timeline */
+.ds-timeline { position:relative; padding-left:1rem; }
+.ds-timeline::before { content:''; position:absolute; left:3px; top:6px; bottom:6px; width:1px; background:var(--border); }
+.ds-tl-item { display:flex; align-items:flex-start; gap:.7rem; padding:.35rem 0; position:relative; }
+.ds-tl-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:5px; margin-left:-1rem; position:relative; z-index:1; border:2px solid var(--bg-chat); }
+.ds-tl-dot.tl-green { background:var(--green); }
+.ds-tl-dot.tl-red { background:var(--red); }
+.ds-tl-dot.tl-gray { background:var(--text-dim); }
+.ds-tl-content { flex:1; }
+.ds-tl-text { font-size:.85rem; color:var(--text-secondary); }
+.ds-tl-text strong { color:var(--text); font-weight:500; }
+.ds-tl-time { font-family:var(--mono); font-size:.7rem; color:var(--text-dim); margin-top:.1rem; }
+
+@media (max-width:560px) { .ds-row { grid-template-columns:repeat(2,1fr); } }
