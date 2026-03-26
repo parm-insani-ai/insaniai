@@ -136,7 +136,7 @@ async def render_document_pages(
             select(DocumentPage).where(
                 DocumentPage.document_id == doc.id,
                 DocumentPage.page_number == page_num,
-            )
+            ).order_by(DocumentPage.id.desc()).limit(1)
         )
         page = page_result.scalar_one_or_none()
         if page:
@@ -267,7 +267,7 @@ async def extract_title_block(
         select(DocumentPage).where(
             DocumentPage.document_id == doc_id,
             DocumentPage.page_number == page_number,
-        )
+        ).order_by(DocumentPage.id.desc()).limit(1)
     )
     page = page_result.scalar_one_or_none()
     if page:
@@ -518,7 +518,7 @@ async def ask_about_drawings(
             select(DocumentPage).where(
                 DocumentPage.document_id == doc_id,
                 DocumentPage.page_number == page_num,
-            )
+            ).order_by(DocumentPage.id.desc()).limit(1)
         )
         page = page_result.scalar_one_or_none()
         if not page or not page.image_path or not os.path.exists(page.image_path):

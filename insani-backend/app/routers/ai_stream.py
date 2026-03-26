@@ -106,7 +106,7 @@ async def stream_ask(
                         select(DocumentPage).where(
                             DocumentPage.document_id == dd.id,
                             DocumentPage.page_number == page_num,
-                        )
+                        ).order_by(DocumentPage.id.desc()).limit(1)
                     )
                     page = page_result.scalar_one_or_none()
                     if page and page.image_path and os.path.exists(page.image_path):

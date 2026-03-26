@@ -180,7 +180,7 @@ async def serve_page_image(
         select(DocumentPage).where(
             DocumentPage.document_id == doc_id,
             DocumentPage.page_number == page_number,
-        )
+        ).order_by(DocumentPage.id.desc()).limit(1)
     )
     page = result.scalar_one_or_none()
     if not page or not page.image_path:
