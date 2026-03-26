@@ -65,26 +65,8 @@ function rmFile(i) {
   chips();
 }
 
-// ── Drag & drop listeners ──
-// Show overlay when dragging files over the page (but not over viewers)
-document.addEventListener('dragover', e => {
-  e.preventDefault();
-  // Don't show drop zone if a viewer panel is open
-  var drawingOpen = document.getElementById('drawingViewerOverlay') && document.getElementById('drawingViewerOverlay').classList.contains('open');
-  var pdfOpen = document.getElementById('pdfViewerOverlay') && document.getElementById('pdfViewerOverlay').classList.contains('open');
-  if (drawingOpen || pdfOpen) return;
-  document.getElementById('dropZone').classList.add('on');
-});
-
-// Hide overlay when dragging leaves the drop zone
-document.getElementById('dropZone').addEventListener('dragleave', e => {
-  e.preventDefault();
-  document.getElementById('dropZone').classList.remove('on');
-});
-
-// Process dropped files
-document.getElementById('dropZone').addEventListener('drop', e => {
-  e.preventDefault();
-  document.getElementById('dropZone').classList.remove('on');
-  Array.from(e.dataTransfer.files).forEach(addFile);
-});
+// ── Drag & drop disabled ──
+// File uploads are handled via the sidebar buttons.
+// Prevent default drag behavior to avoid browser opening dropped files.
+document.addEventListener('dragover', e => { e.preventDefault(); });
+document.addEventListener('drop', e => { e.preventDefault(); });
