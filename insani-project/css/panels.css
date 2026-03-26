@@ -431,14 +431,11 @@
   color: var(--text-dim); font-size: 0.85rem;
   line-height: 1; padding: 0;
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 0.3;
   transition: all 0.12s;
-  display: grid; place-items: center;
-  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .sb-delete:hover { background: var(--red); color: #fff; opacity: 1; }
-.sb-item:hover .sb-delete,
-.doc-item:hover .sb-delete { opacity: 1; }
 
 /* ── Document list in sidebar/project ── */
 .doc-list { margin-top: 0.5rem; }
