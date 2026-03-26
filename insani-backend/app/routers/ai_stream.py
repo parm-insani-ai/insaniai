@@ -3,6 +3,7 @@ AI Streaming Router -- with integration data injection.
 """
 
 import json
+import os
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
@@ -84,6 +85,46 @@ async def stream_ask(
     except Exception as e:
         logger.warning("stream_synced_data_error", error=str(e))
 
+    # -- Load drawing images for blueprint documents --
+    drawing_images = []
+    try:
+        drawing_docs = [d for d in project_docs if getattr(d, 'doc_type', '') == 'drawing']
+        if drawing_docs:
+            from app.services.blueprint_service import find_relevant_pages, build_drawing_metadata_context
+            from app.models.db_models import DocumentPage
+            from PIL import Image
+            import base64, io
+
+            for dd in drawing_docs[:3]:  # Max 3 drawing documents
+                metadata_ctx = await build_drawing_metadata_context(db, dd.id)
+                if metadata_ctx:
+                    doc_context = (doc_context + "\n\nDRAWING INDEX:\n" + metadata_ctx) if doc_context else ("DRAWING INDEX:\n" + metadata_ctx)
+
+                relevant = await find_relevant_pages(db, dd.id, body.message, max_pages=3)
+                for page_num in relevant:
+                    page_result = await db.execute(
+                        select(DocumentPage).where(
+                            DocumentPage.document_id == dd.id,
+                            DocumentPage.page_number == page_num,
+                        )
+                    )
+                    page = page_result.scalar_one_or_none()
+                    if page and page.image_path and os.path.exists(page.image_path):
+                        img = Image.open(page.image_path)
+                        buf = io.BytesIO()
+                        img.save(buf, format="PNG")
+                        img_b64 = base64.standard_b64encode(buf.getvalue()).decode("ascii")
+                        drawing_images.append({
+                            "page_number": page_num,
+                            "base64": img_b64,
+                            "doc_id": dd.id,
+                        })
+
+            if drawing_images:
+                logger.info("stream_drawing_images_loaded", count=len(drawing_images))
+    except Exception as e:
+        logger.warning("stream_drawing_load_error", error=str(e))
+
     # -- Save user message --
     file_meta = [{"name": f.get("name", "file")} for f in body.files] if body.files else []
     await chat_service.save_message(db, session_id, "user", body.message, file_meta)
@@ -109,6 +150,7 @@ async def stream_ask(
                 conversation_history=history,
                 files=body.files or None,
                 document_context=doc_context,
+                drawing_images=drawing_images or None,
             ):
                 full_response += chunk
                 yield f"event: token\ndata: {json.dumps({'text': chunk})}\n\n"

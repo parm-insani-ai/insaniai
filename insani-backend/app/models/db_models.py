@@ -238,6 +238,7 @@ class Document(Base):
     file_path = Column(String(1000), nullable=False)         # Server storage path
     file_size = Column(Integer, default=0)                   # Bytes
     media_type = Column(String(100), default="application/pdf")
+    doc_type = Column(String(50), default="general")          # general, drawing, specification, submittal
     page_count = Column(Integer, default=0)
     status = Column(String(50), default="processing")        # processing, ready, error
     created_at = Column(DateTime, server_default=func.now())
@@ -264,11 +265,68 @@ class DocumentPage(Base):
     page_number = Column(Integer, nullable=False)   # 1-indexed
     text_content = Column(Text, default="")          # Extracted text from this page
     char_offset = Column(Integer, default=0)         # Character offset from start of doc (for positioning)
+    image_path = Column(String(1000), default="")    # Path to rendered page image (for blueprints)
+    drawing_type = Column(String(50), default="")    # floor_plan, structural, electrical, etc.
 
     document = relationship("Document", back_populates="pages")
 
     __table_args__ = (
         Index("idx_page_doc", "document_id"),
+    )
+
+
+# ═══════════════════════════════════════════════
+# DRAWING ANALYSIS — Cached vision analysis of blueprint pages
+# ═══════════════════════════════════════════════
+
+class DrawingAnalysis(Base):
+    """
+    Caches Claude's vision analysis of a single drawing page.
+    Avoids re-sending expensive images for repeated questions
+    about the same sheet. Each page can have multiple analysis
+    types (general, dimensions, electrical, etc.).
+    """
+    __tablename__ = "drawing_analyses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    page_number = Column(Integer, nullable=False)
+    analysis_type = Column(String(50), default="general")  # general, dimensions, electrical, structural, mep
+    analysis_json = Column(JSON, default=dict)              # Structured extraction from Claude vision
+    image_hash = Column(String(64), default="")             # SHA-256 of image bytes for cache invalidation
+    token_cost = Column(Integer, default=0)                 # Tokens consumed for this analysis
+    created_at = Column(DateTime, server_default=func.now())
+
+    regions = relationship("DrawingRegion", back_populates="analysis", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_analysis_doc_page", "document_id", "page_number"),
+        Index("idx_analysis_type", "document_id", "analysis_type"),
+    )
+
+
+class DrawingRegion(Base):
+    """
+    An identified region/element within a drawing page.
+    Stores normalized bounding box coordinates (0.0-1.0) for
+    visual back-referencing in the frontend viewer.
+    """
+    __tablename__ = "drawing_regions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    analysis_id = Column(Integer, ForeignKey("drawing_analyses.id", ondelete="CASCADE"), nullable=False)
+    label = Column(String(255), nullable=False)      # "Lobby", "Electrical Panel EP-1"
+    region_type = Column(String(50), default="")     # room, element, detail, callout
+    bbox_x = Column(String(20), default="0")         # Normalized x (0.0-1.0), stored as string for SQLite compat
+    bbox_y = Column(String(20), default="0")         # Normalized y
+    bbox_w = Column(String(20), default="0")         # Normalized width
+    bbox_h = Column(String(20), default="0")         # Normalized height
+    metadata_json = Column(JSON, default=dict)       # {dimensions, material, notes, ...}
+
+    analysis = relationship("DrawingAnalysis", back_populates="regions")
+
+    __table_args__ = (
+        Index("idx_region_analysis", "analysis_id"),
     )
 
 

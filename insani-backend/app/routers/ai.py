@@ -6,6 +6,7 @@ POST /v1/ai/ask -- Non-streaming. Checks cache first, manages token budget.
 Rate limited to 20/minute per IP.
 """
 
+import os
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,6 +89,46 @@ async def ask(
     except Exception as e:
         logger.warning("synced_data_load_error", error=str(e))
 
+    # -- Load drawing images for blueprint documents --
+    drawing_images = []
+    try:
+        drawing_docs = [d for d in project_docs if getattr(d, 'doc_type', '') == 'drawing']
+        if drawing_docs:
+            from app.services.blueprint_service import find_relevant_pages, build_drawing_metadata_context
+            from app.models.db_models import DocumentPage
+            from PIL import Image
+            import base64, io
+
+            for dd in drawing_docs[:3]:
+                metadata_ctx = await build_drawing_metadata_context(db, dd.id)
+                if metadata_ctx:
+                    doc_context = (doc_context + "\n\nDRAWING INDEX:\n" + metadata_ctx) if doc_context else ("DRAWING INDEX:\n" + metadata_ctx)
+
+                relevant = await find_relevant_pages(db, dd.id, body.message, max_pages=3)
+                for page_num in relevant:
+                    page_result = await db.execute(
+                        select(DocumentPage).where(
+                            DocumentPage.document_id == dd.id,
+                            DocumentPage.page_number == page_num,
+                        )
+                    )
+                    page = page_result.scalar_one_or_none()
+                    if page and page.image_path and os.path.exists(page.image_path):
+                        img = Image.open(page.image_path)
+                        buf = io.BytesIO()
+                        img.save(buf, format="PNG")
+                        img_b64 = base64.standard_b64encode(buf.getvalue()).decode("ascii")
+                        drawing_images.append({
+                            "page_number": page_num,
+                            "base64": img_b64,
+                            "doc_id": dd.id,
+                        })
+
+            if drawing_images:
+                logger.info("drawing_images_loaded", count=len(drawing_images))
+    except Exception as e:
+        logger.warning("drawing_load_error", error=str(e))
+
     # -- 2. Check cache (skip if files attached) --
     cached_response = None
     if not body.files:
@@ -133,6 +174,7 @@ async def ask(
                 conversation_history=history,
                 files=body.files or None,
                 document_context=doc_context,
+                drawing_images=drawing_images or None,
             )
         except RuntimeError as e:
             await chat_service.save_message(db, session_id, "assistant", f"Error: {str(e)}")

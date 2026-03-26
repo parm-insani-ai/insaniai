@@ -41,6 +41,17 @@ FORMAT YOUR RESPONSES WITH HTML:
         # Check if the context contains synced integration data (emails, invoices)
         has_synced_data = "=== GMAIL" in document_context or "=== QUICKBOOKS" in document_context
         has_documents = "=== DOCUMENT:" in document_context
+        has_drawings = "DRAWING INDEX" in document_context or "--- DRAWING PAGE" in document_context
+
+        if has_drawings:
+            base += """
+
+DRAWING CITATION RULES:
+When referencing information from a drawing/blueprint:
+1. Cite using: <span class="drawing-cite" data-doc-id="DOC_ID" data-page="PAGE">Sheet SHEET_NUM, DESCRIPTION</span>
+2. ONLY state what you can actually see in the drawing. Never guess or fabricate.
+3. If something is unclear, say so explicitly rather than guessing.
+4. When citing dimensions, reproduce them EXACTLY as shown."""
 
         if has_documents:
             base += f"""
@@ -76,16 +87,33 @@ async def ask_claude(
     conversation_history: list[dict],
     files: list[dict] | None = None,
     document_context: str = "",
+    drawing_images: list[dict] | None = None,
 ) -> str:
     """
     Send a message to Claude asynchronously.
 
     Returns the AI's response text.
     Raises a sanitized error on failure (no API key leakage).
+
+    drawing_images: optional list of {page_number, base64, doc_id} for
+    blueprint vision queries injected from the chat pipeline.
     """
     # Build multimodal or text-only content
+    user_content = []
+    has_media = bool(files or drawing_images)
+
+    if drawing_images:
+        for di in drawing_images:
+            user_content.append({
+                "type": "text",
+                "text": f"\n--- DRAWING PAGE {di['page_number']} (doc_id: {di['doc_id']}) ---",
+            })
+            user_content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/png", "data": di["base64"]},
+            })
+
     if files:
-        user_content = []
         for f in files:
             mt = f.get("media_type", "")
             if mt == "application/pdf":
@@ -98,6 +126,8 @@ async def ask_claude(
                     "type": "image",
                     "source": {"type": "base64", "media_type": mt, "data": f["base64"]}
                 })
+
+    if has_media:
         user_content.append({
             "type": "text",
             "text": message or "Analyze these documents in the context of the current project."
@@ -111,7 +141,7 @@ async def ask_claude(
         # Async call — doesn't block the event loop
         response = await client.messages.create(
             model=settings.ANTHROPIC_MODEL,
-            max_tokens=settings.ANTHROPIC_MAX_TOKENS,
+            max_tokens=2048 if drawing_images else settings.ANTHROPIC_MAX_TOKENS,
             system=build_system_prompt(project_data, document_context),
             messages=messages
         )
@@ -234,18 +264,31 @@ async def stream_claude(
     conversation_history: list[dict],
     files: list[dict] | None = None,
     document_context: str = "",
+    drawing_images: list[dict] | None = None,
 ):
     """
     Stream tokens from Claude as an async generator.
     Yields individual text chunks as they arrive.
 
-    Usage:
-        async for chunk in stream_claude(msg, data, history):
-            print(chunk, end="")
+    drawing_images: optional list of {page_number, base64, doc_id} for
+    blueprint vision queries injected from the chat pipeline.
     """
     # Build content (same as ask_claude)
+    user_content = []
+    has_media = bool(files or drawing_images)
+
+    if drawing_images:
+        for di in drawing_images:
+            user_content.append({
+                "type": "text",
+                "text": f"\n--- DRAWING PAGE {di['page_number']} (doc_id: {di['doc_id']}) ---",
+            })
+            user_content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/png", "data": di["base64"]},
+            })
+
     if files:
-        user_content = []
         for f in files:
             mt = f.get("media_type", "")
             if mt == "application/pdf":
@@ -258,6 +301,8 @@ async def stream_claude(
                     "type": "image",
                     "source": {"type": "base64", "media_type": mt, "data": f["base64"]}
                 })
+
+    if has_media:
         user_content.append({
             "type": "text",
             "text": message or "Analyze these documents in the context of the current project."
@@ -270,7 +315,7 @@ async def stream_claude(
     try:
         async with client.messages.stream(
             model=settings.ANTHROPIC_MODEL,
-            max_tokens=settings.ANTHROPIC_MAX_TOKENS,
+            max_tokens=2048 if drawing_images else settings.ANTHROPIC_MAX_TOKENS,
             system=build_system_prompt(project_data, document_context),
             messages=messages,
         ) as stream:

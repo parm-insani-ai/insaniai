@@ -25,7 +25,7 @@ from app.middleware.auth import require_auth_context, AuthContext
 logger = structlog.get_logger()
 router = APIRouter(prefix="/v1/documents", tags=["Documents"])
 
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB (blueprints can be large)
 
 
 # ── Response schemas ──

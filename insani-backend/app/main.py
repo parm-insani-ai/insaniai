@@ -22,7 +22,7 @@ from app.middleware.errors import global_exception_handler, http_exception_handl
 from app.middleware.logging import RequestLoggingMiddleware
 
 # Import routers
-from app.routers import auth, projects, chat, ai, ai_stream, documents, integrations
+from app.routers import auth, projects, chat, ai, ai_stream, documents, integrations, drawings
 from app.services.monitoring import init_sentry, metrics
 
 # Configure structured logging
@@ -96,6 +96,7 @@ app.include_router(ai.router)
 app.include_router(ai_stream.router)
 app.include_router(documents.router)
 app.include_router(integrations.router)
+app.include_router(drawings.router)
 
 
 # -- Health check --
