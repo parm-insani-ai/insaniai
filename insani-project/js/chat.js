@@ -138,6 +138,7 @@ async function loadRecentChats() {
       '<div class="sb-item ' + (s.id === activeChatId ? 'active' : '') + '" onclick="loadChatSession(' + s.id + ')">' +
         '<span class="sb-icon" style="color:var(--text-dim)">-</span>' +
         '<span class="sb-text">' + esc(s.title) + '</span>' +
+        '<button class="sb-delete" onclick="event.stopPropagation();deleteChat(' + s.id + ')" title="Delete chat">×</button>' +
       '</div>'
     ).join('');
   } catch (e) {
@@ -146,6 +147,20 @@ async function loadRecentChats() {
 }
 
 function renderRecentChats() { loadRecentChats(); }
+
+async function deleteChat(sessionId) {
+  try {
+    await apiDeleteSession(sessionId);
+    if (activeChatId === sessionId) {
+      activeChatId = null;
+      newChat();
+    }
+    await loadRecentChats();
+    showToast('Chat deleted');
+  } catch (e) {
+    showToast('Failed to delete chat');
+  }
+}
 
 // ── DOM rendering ──
 

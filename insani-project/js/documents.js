@@ -76,8 +76,19 @@ function renderDocumentList() {
       '<span class="doc-item-icon">PDF</span>' +
       '<span class="doc-item-name">' + esc(d.filename) + '</span>' +
       '<span class="doc-item-pages">' + d.page_count + 'p</span>' +
+      '<button class="sb-delete" onclick="event.stopPropagation();deleteDocument(' + d.id + ')" title="Delete document">×</button>' +
     '</div>';
   }).join('');
+}
+
+async function deleteDocument(docId) {
+  try {
+    await apiFetch('/v1/documents/' + docId, { method: 'DELETE' });
+    await loadProjectDocuments();
+    showToast('Document deleted');
+  } catch (e) {
+    showToast('Failed to delete document');
+  }
 }
 
 // ═══ PDF VIEWER ═══

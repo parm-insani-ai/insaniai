@@ -422,6 +422,21 @@
   margin-top: 0.1rem;
 }
 
+/* ── Sidebar delete button (×) ── */
+.sb-delete {
+  display: none;
+  width: 18px; height: 18px;
+  background: none; border: none;
+  border-radius: 4px; cursor: pointer;
+  color: var(--text-dim); font-size: 0.85rem;
+  line-height: 1; padding: 0;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+.sb-delete:hover { background: var(--red); color: #fff; }
+.sb-item:hover .sb-delete,
+.doc-item:hover .sb-delete { display: grid; place-items: center; }
+
 /* ── Document list in sidebar/project ── */
 .doc-list { margin-top: 0.5rem; }
 .doc-item {

@@ -120,8 +120,23 @@ function renderDrawingList() {
       '<span class="doc-item-icon" style="color:var(--blue)">BP</span>' +
       '<span class="doc-item-name">' + esc(d.filename) + '</span>' +
       '<span class="doc-item-pages">' + sheetCount + 's</span>' +
+      '<button class="sb-delete" onclick="event.stopPropagation();deleteDrawing(' + d.id + ')" title="Delete blueprint">×</button>' +
     '</div>';
   }).join('');
+}
+
+async function deleteDrawing(docId) {
+  try {
+    await apiFetch('/v1/documents/' + docId, { method: 'DELETE' });
+    if (activeDrawingDoc === docId) {
+      activeDrawingDoc = null;
+      closeDrawingViewer();
+    }
+    await loadDrawingDocuments();
+    showToast('Blueprint deleted');
+  } catch (e) {
+    showToast('Failed to delete blueprint');
+  }
 }
 
 // ═══ DRAWING VIEWER ═══
