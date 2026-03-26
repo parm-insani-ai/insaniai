@@ -66,9 +66,13 @@ function rmFile(i) {
 }
 
 // ── Drag & drop listeners ──
-// Show overlay when dragging files over the page
+// Show overlay when dragging files over the page (but not over viewers)
 document.addEventListener('dragover', e => {
   e.preventDefault();
+  // Don't show drop zone if a viewer panel is open
+  var drawingOpen = document.getElementById('drawingViewerOverlay') && document.getElementById('drawingViewerOverlay').classList.contains('open');
+  var pdfOpen = document.getElementById('pdfViewerOverlay') && document.getElementById('pdfViewerOverlay').classList.contains('open');
+  if (drawingOpen || pdfOpen) return;
   document.getElementById('dropZone').classList.add('on');
 });
 
