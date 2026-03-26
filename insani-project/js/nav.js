@@ -101,8 +101,9 @@ async function selectProject(id) {
   // Reset chat
   newChat();
 
-  // Load documents for this project
+  // Load documents and blueprints for this project
   await loadProjectDocuments();
+  await loadDrawingDocuments();
 }
 
 // ── Dashboard (dynamic from project data) ──

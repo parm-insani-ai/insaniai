@@ -17,8 +17,8 @@ function onFiles(e) {
  * Adds to the global `files` array and re-renders chips.
  */
 function addFile(f) {
-  if (f.size > 10 * 1024 * 1024) {
-    showToast('File too large — max 10MB');
+  if (f.size > 50 * 1024 * 1024) {
+    showToast('File too large — max 50MB');
     return;
   }
 

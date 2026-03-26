@@ -74,6 +74,35 @@
   </div>
 </div>
 
+<!-- Drawing Viewer panel (for blueprints — image-based with zoom/nav) -->
+<div class="drawing-viewer-overlay" id="drawingViewerOverlay">
+  <div class="drawing-viewer-panel">
+    <div class="drawing-viewer-header">
+      <div class="drawing-viewer-title" id="drawingViewerTitle">Drawing</div>
+      <div class="drawing-viewer-nav">
+        <button onclick="drawingPrevPage()" title="Previous sheet">&#9664;</button>
+        <span id="drawingPageLabel">Sheet 1 of 1</span>
+        <button onclick="drawingNextPage()" title="Next sheet">&#9654;</button>
+      </div>
+      <div class="drawing-viewer-zoom">
+        <button onclick="drawingZoomOut()" title="Zoom out">−</button>
+        <button onclick="drawingZoomFit()" title="Fit to view">Fit</button>
+        <button onclick="drawingZoomIn()" title="Zoom in">+</button>
+      </div>
+      <button class="drawing-viewer-close" onclick="closeDrawingViewer()">×</button>
+    </div>
+    <div class="drawing-viewer-body" id="drawingViewerBody">
+      <div class="drawing-canvas" id="drawingCanvas">
+        <img id="drawingImage" src="" alt="Drawing sheet">
+        <div class="drawing-highlights" id="drawingHighlights"></div>
+      </div>
+    </div>
+    <div class="drawing-viewer-footer">
+      <div class="drawing-sheets" id="drawingSheets"></div>
+    </div>
+  </div>
+</div>
+
 <div class="loader" id="loader"><div><div class="loader-spin"></div><div class="loader-txt">Connecting…</div><div class="loader-sub" id="loaderSub">Checking backend</div></div></div>
 
 <!-- ═══ APP (hidden until auth) ═══ -->
@@ -102,6 +131,18 @@
           <span class="sb-icon" style="font-size:0.7rem">⚙</span>
           <span class="sb-text" style="font-size:0.78rem;color:var(--text-muted)">Manage integrations</span>
         </div>
+      </div>
+
+      <!-- Blueprints / Drawings -->
+      <div class="sb-section">
+        <div class="sb-label">Blueprints</div>
+        <div id="drawingList">
+          <div style="color:var(--text-dim);font-size:0.75rem;padding:0.3rem 0.6rem">No blueprints uploaded</div>
+        </div>
+        <label class="doc-upload-btn">
+          + Upload blueprint
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" onchange="uploadDrawing(this)">
+        </label>
       </div>
 
       <!-- Project documents (uploaded PDFs) -->
@@ -206,6 +247,7 @@
 <script src="js/files.js"></script>
 <script src="js/panels.js"></script>
 <script src="js/documents.js"></script>
+<script src="js/drawings.js"></script>
 <script src="js/integrations.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/main.js"></script>

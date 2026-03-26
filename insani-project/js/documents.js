@@ -16,8 +16,8 @@ async function uploadDocument(inputEl) {
     return;
   }
 
-  if (file.size > 20 * 1024 * 1024) {
-    showToast('File too large - max 20MB');
+  if (file.size > 50 * 1024 * 1024) {
+    showToast('File too large - max 50MB');
     return;
   }
 
