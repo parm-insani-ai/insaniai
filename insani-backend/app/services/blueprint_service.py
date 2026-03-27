@@ -670,13 +670,21 @@ async def get_drawing_sheets(db: AsyncSession, doc_id: int, org_id: int) -> list
     if not doc:
         return []
 
-    # Get pages with their analysis data
+    # Get pages with their analysis data — deduplicate by page_number
     pages_result = await db.execute(
         select(DocumentPage).where(
             DocumentPage.document_id == doc_id,
-        ).order_by(DocumentPage.page_number)
+        ).order_by(DocumentPage.page_number, DocumentPage.id.desc())
     )
-    pages = list(pages_result.scalars().all())
+    all_pages = list(pages_result.scalars().all())
+
+    # Keep only the latest row per page_number
+    seen = set()
+    pages = []
+    for page in all_pages:
+        if page.page_number not in seen:
+            seen.add(page.page_number)
+            pages.append(page)
 
     analyses_result = await db.execute(
         select(DrawingAnalysis).where(
