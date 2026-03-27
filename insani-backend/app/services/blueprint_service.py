@@ -38,9 +38,9 @@ logger = structlog.get_logger()
 _vision_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
-RENDER_DPI = int(os.getenv("BLUEPRINT_RENDER_DPI", "200"))
-MAX_VISION_PAGES = int(os.getenv("BLUEPRINT_MAX_VISION_PAGES", "5"))
-MAX_IMAGE_DIMENSION = 8000  # Claude vision max is 8192px per side
+RENDER_DPI = int(os.getenv("BLUEPRINT_RENDER_DPI", "150"))
+MAX_VISION_PAGES = int(os.getenv("BLUEPRINT_MAX_VISION_PAGES", "3"))
+MAX_IMAGE_DIMENSION = 4000  # Keep images manageable for API
 
 
 # ═══════════════════════════════════════════════
@@ -79,10 +79,17 @@ def _resize_if_needed(img: Image.Image) -> Image.Image:
     return img.resize((new_w, new_h), Image.LANCZOS)
 
 
-def _image_to_base64(img: Image.Image) -> str:
-    """Convert PIL Image to base64-encoded PNG string."""
+def _image_to_base64(img: Image.Image, for_vision: bool = False) -> str:
+    """Convert PIL Image to base64-encoded string.
+    Uses JPEG for vision API calls (much smaller) and PNG for disk storage."""
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
+    if for_vision:
+        # Convert to RGB if needed (JPEG doesn't support RGBA)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.save(buf, format="JPEG", quality=75)
+    else:
+        img.save(buf, format="PNG", optimize=True)
     return base64.standard_b64encode(buf.getvalue()).decode("ascii")
 
 
@@ -189,7 +196,8 @@ async def extract_title_block(
 
     # Load image and encode
     img = Image.open(image_path)
-    img_b64 = _image_to_base64(img)
+    img = _resize_if_needed(img)
+    img_b64 = _image_to_base64(img, for_vision=True)
     img_h = _image_hash(img)
 
     # Check cache — skip if we already analyzed this exact image
@@ -213,7 +221,7 @@ async def extract_title_block(
                 "content": [
                     {
                         "type": "image",
-                        "source": {"type": "base64", "media_type": "image/png", "data": img_b64},
+                        "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64},
                     },
                     {"type": "text", "text": TITLE_BLOCK_PROMPT},
                 ],
@@ -527,7 +535,7 @@ async def ask_about_drawings(
         try:
             img = Image.open(page.image_path)
             img = _resize_if_needed(img)
-            img_b64 = _image_to_base64(img)
+            img_b64 = _image_to_base64(img, for_vision=True)
 
             content_blocks.append({
                 "type": "text",
@@ -535,7 +543,7 @@ async def ask_about_drawings(
             })
             content_blocks.append({
                 "type": "image",
-                "source": {"type": "base64", "media_type": "image/png", "data": img_b64},
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64},
             })
 
             # Include extracted text for this page if available (helps with specs/notes)

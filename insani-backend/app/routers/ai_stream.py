@@ -111,8 +111,15 @@ async def stream_ask(
                     page = page_result.scalar_one_or_none()
                     if page and page.image_path and os.path.exists(page.image_path):
                         img = Image.open(page.image_path)
+                        # Resize large images and use JPEG for smaller payload
+                        w, h = img.size
+                        if max(w, h) > 4000:
+                            scale = 4000 / max(w, h)
+                            img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+                        if img.mode in ("RGBA", "P"):
+                            img = img.convert("RGB")
                         buf = io.BytesIO()
-                        img.save(buf, format="PNG")
+                        img.save(buf, format="JPEG", quality=75)
                         img_b64 = base64.standard_b64encode(buf.getvalue()).decode("ascii")
                         drawing_images.append({
                             "page_number": page_num,

@@ -110,7 +110,7 @@ async def ask_claude(
             })
             user_content.append({
                 "type": "image",
-                "source": {"type": "base64", "media_type": "image/png", "data": di["base64"]},
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": di["base64"]},
             })
 
     if files:
@@ -285,7 +285,7 @@ async def stream_claude(
             })
             user_content.append({
                 "type": "image",
-                "source": {"type": "base64", "media_type": "image/png", "data": di["base64"]},
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": di["base64"]},
             })
 
     if files:
