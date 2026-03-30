@@ -37,10 +37,21 @@ function showDash() {
 
 // ── Project picker (dynamic from API) ──
 
-/** Load projects from backend and render the picker dropdown. */
+/** Load projects from backend and render the picker dropdown. Auto-creates a default project if none exist. */
 async function loadProjects() {
   try {
-    const projects = await apiListProjects();
+    let projects = await apiListProjects();
+
+    // Auto-create a default project if user has none
+    if (!projects.length) {
+      try {
+        await apiCreateProject('My Project', '', '', {});
+        projects = await apiListProjects();
+      } catch (e) {
+        console.warn('Failed to create default project:', e.message);
+      }
+    }
+
     allProjects = projects;
 
     const menu = document.getElementById('projectMenu');
