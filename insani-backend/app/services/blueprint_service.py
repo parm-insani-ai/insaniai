@@ -21,6 +21,14 @@ import json
 import os
 from pathlib import Path
 
+from app.services.hybrid_extraction import (
+    detect_pdf_type,
+    build_hybrid_context,
+    should_use_vision,
+    extract_title_block_from_text,
+    extract_page_text_with_positions,
+)
+
 from PIL import Image
 from pdf2image import convert_from_path
 from sqlalchemy import select, and_
@@ -487,13 +495,16 @@ async def ask_about_drawings(
     max_pages: int = MAX_VISION_PAGES,
 ) -> dict:
     """
-    Answer a question about a drawing document using Claude vision.
+    Answer a question about a drawing document using hybrid extraction
+    (direct text + optional Claude vision).
 
-    Flow:
-    1. Find the most relevant pages using cached metadata
-    2. Load those page images
-    3. Build a multimodal prompt with images + text context + question
-    4. Send to Claude and return the response
+    HYBRID FLOW:
+    1. Detect PDF type (vector vs raster)
+    2. Extract text/dimensions directly from PDF (99% accurate for vector)
+    3. Find the most relevant pages using cached metadata
+    4. Determine if vision is needed for this question
+    5. Build prompt with extracted data + images (if needed)
+    6. Send to Claude and return the response
 
     Returns {response: str, pages_used: list[int], token_cost: int}
     """
@@ -508,6 +519,25 @@ async def ask_about_drawings(
     # Find relevant pages
     relevant_pages = await find_relevant_pages(db, doc_id, question, max_pages)
 
+    # --- HYBRID EXTRACTION: Get direct text data from PDF ---
+    hybrid_data = None
+    pdf_type = "raster"
+    if os.path.exists(doc.file_path):
+        try:
+            hybrid_data = build_hybrid_context(doc.file_path, relevant_pages)
+            pdf_type = hybrid_data.get("pdf_type", "raster")
+            logger.info(
+                "hybrid_extraction_complete",
+                doc_id=doc_id,
+                pdf_type=pdf_type,
+                pages=relevant_pages,
+                extracted_pages=len(hybrid_data.get("pages", [])),
+            )
+        except Exception as e:
+            logger.warning("hybrid_extraction_failed", doc_id=doc_id, error=str(e))
+
+    use_vision = should_use_vision(pdf_type, question)
+
     # Build multimodal content blocks
     content_blocks = []
     pages_used = []
@@ -520,54 +550,63 @@ async def ask_about_drawings(
             "text": f"DRAWING INDEX (all sheets in this document):\n{metadata_context}",
         })
 
-    # Add relevant page images (expensive but accurate)
-    for page_num in relevant_pages:
-        page_result = await db.execute(
-            select(DocumentPage).where(
-                DocumentPage.document_id == doc_id,
-                DocumentPage.page_number == page_num,
-            ).order_by(DocumentPage.id.desc()).limit(1)
-        )
-        page = page_result.scalar_one_or_none()
-        if not page or not page.image_path or not os.path.exists(page.image_path):
-            continue
+    # --- INJECT DIRECT EXTRACTION DATA (high accuracy, no cost) ---
+    if hybrid_data and hybrid_data.get("text_context"):
+        content_blocks.append({
+            "type": "text",
+            "text": f"DIRECTLY EXTRACTED DATA (from PDF — high accuracy, use this for dimensions/text/specs):\n{hybrid_data['text_context'][:8000]}",
+        })
 
-        try:
-            img = Image.open(page.image_path)
-            img = _resize_if_needed(img)
-            img_b64 = _image_to_base64(img, for_vision=True)
+    # --- ADD IMAGES only if vision is needed ---
+    if use_vision:
+        for page_num in relevant_pages:
+            page_result = await db.execute(
+                select(DocumentPage).where(
+                    DocumentPage.document_id == doc_id,
+                    DocumentPage.page_number == page_num,
+                ).order_by(DocumentPage.id.desc()).limit(1)
+            )
+            page = page_result.scalar_one_or_none()
+            if not page or not page.image_path or not os.path.exists(page.image_path):
+                continue
 
-            content_blocks.append({
-                "type": "text",
-                "text": f"\n--- DRAWING PAGE {page_num} ---",
-            })
-            content_blocks.append({
-                "type": "image",
-                "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64},
-            })
+            try:
+                img = Image.open(page.image_path)
+                img = _resize_if_needed(img)
+                img_b64 = _image_to_base64(img, for_vision=True)
 
-            # Include extracted text for this page if available (helps with specs/notes)
-            if page.text_content and page.text_content.strip():
                 content_blocks.append({
                     "type": "text",
-                    "text": f"[Extracted text from page {page_num}]: {page.text_content[:2000]}",
+                    "text": f"\n--- DRAWING PAGE {page_num} (image for visual analysis) ---",
+                })
+                content_blocks.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64},
                 })
 
-            pages_used.append(page_num)
-        except Exception as e:
-            logger.warning("page_image_load_failed", doc_id=doc_id, page=page_num, error=str(e))
+                pages_used.append(page_num)
+            except Exception as e:
+                logger.warning("page_image_load_failed", doc_id=doc_id, page=page_num, error=str(e))
+    else:
+        # Text-only mode — mark which pages we're referencing
+        pages_used = relevant_pages
+        logger.info("vision_skipped", doc_id=doc_id, pdf_type=pdf_type, question=question[:80])
 
-    if not pages_used:
+    if not pages_used and not (hybrid_data and hybrid_data.get("text_context")):
         return {
             "response": "No drawing pages could be loaded for analysis. Please try re-uploading the document.",
             "pages_used": [],
             "token_cost": 0,
         }
 
-    # Add the user's question
+    # Add the user's question with accuracy instructions
+    accuracy_note = ""
+    if hybrid_data and pdf_type == "vector":
+        accuracy_note = " The DIRECTLY EXTRACTED DATA section contains text pulled straight from the PDF file and is highly accurate — prefer it for dimensions, text, and specifications over reading from images."
+
     content_blocks.append({
         "type": "text",
-        "text": f"\nQUESTION: {question}\n\nRemember: doc_id for citations is {doc_id}. Only state what you can actually see. Be precise.",
+        "text": f"\nQUESTION: {question}\n\nRemember: doc_id for citations is {doc_id}. Only state what you can actually verify.{accuracy_note}",
     })
 
     # Build system prompt with project context if available
@@ -591,6 +630,8 @@ async def ask_about_drawings(
         logger.info(
             "drawing_qa_complete",
             doc_id=doc_id,
+            pdf_type=pdf_type,
+            used_vision=use_vision,
             pages=pages_used,
             tokens=token_cost,
             question=question[:80],

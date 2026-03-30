@@ -42,6 +42,7 @@ FORMAT YOUR RESPONSES WITH HTML:
         has_synced_data = "=== GMAIL" in document_context or "=== QUICKBOOKS" in document_context
         has_documents = "=== DOCUMENT:" in document_context
         has_drawings = "DRAWING INDEX" in document_context or "--- DRAWING PAGE" in document_context
+        has_extracted_data = "DIRECTLY EXTRACTED DATA" in document_context
 
         if has_drawings:
             base += """
@@ -49,9 +50,20 @@ FORMAT YOUR RESPONSES WITH HTML:
 DRAWING CITATION RULES:
 When referencing information from a drawing/blueprint:
 1. Cite using: <span class="drawing-cite" data-doc-id="DOC_ID" data-page="PAGE">Sheet SHEET_NUM, DESCRIPTION</span>
-2. ONLY state what you can actually see in the drawing. Never guess or fabricate.
+2. ONLY state what you can actually verify. Never guess or fabricate.
 3. If something is unclear, say so explicitly rather than guessing.
 4. When citing dimensions, reproduce them EXACTLY as shown."""
+
+        if has_extracted_data:
+            base += """
+
+ACCURACY PRIORITY RULES (CRITICAL):
+The DIRECTLY EXTRACTED DATA sections contain text pulled programmatically from the PDF file.
+This data is MORE ACCURATE than reading from images. When answering:
+1. For dimensions, measurements, text, specs, notes: PREFER the directly extracted data.
+2. For spatial relationships, layouts, symbol identification: Use the drawing images.
+3. If extracted data and image analysis conflict, trust the extracted data for text/numbers.
+4. Always cite the specific page where you found the information."""
 
         if has_documents:
             base += f"""

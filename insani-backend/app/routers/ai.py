@@ -89,12 +89,13 @@ async def ask(
     except Exception as e:
         logger.warning("synced_data_load_error", error=str(e))
 
-    # -- Load drawing images for blueprint documents --
+    # -- Load drawing data for blueprint documents (hybrid: text + optional images) --
     drawing_images = []
     try:
         drawing_docs = [d for d in project_docs if getattr(d, 'doc_type', '') == 'drawing']
         if drawing_docs:
             from app.services.blueprint_service import find_relevant_pages, build_drawing_metadata_context
+            from app.services.hybrid_extraction import build_hybrid_context, should_use_vision
             from app.models.db_models import DocumentPage
             from PIL import Image
             import base64, io
@@ -105,31 +106,43 @@ async def ask(
                     doc_context = (doc_context + "\n\nDRAWING INDEX:\n" + metadata_ctx) if doc_context else ("DRAWING INDEX:\n" + metadata_ctx)
 
                 relevant = await find_relevant_pages(db, dd.id, body.message, max_pages=3)
-                for page_num in relevant:
-                    page_result = await db.execute(
-                        select(DocumentPage).where(
-                            DocumentPage.document_id == dd.id,
-                            DocumentPage.page_number == page_num,
-                        ).order_by(DocumentPage.id.desc()).limit(1)
-                    )
-                    page = page_result.scalar_one_or_none()
-                    if page and page.image_path and os.path.exists(page.image_path):
-                        img = Image.open(page.image_path)
-                        # Resize large images and use JPEG for smaller payload
-                        w, h = img.size
-                        if max(w, h) > 4000:
-                            scale = 4000 / max(w, h)
-                            img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-                        if img.mode in ("RGBA", "P"):
-                            img = img.convert("RGB")
-                        buf = io.BytesIO()
-                        img.save(buf, format="JPEG", quality=75)
-                        img_b64 = base64.standard_b64encode(buf.getvalue()).decode("ascii")
-                        drawing_images.append({
-                            "page_number": page_num,
-                            "base64": img_b64,
-                            "doc_id": dd.id,
-                        })
+
+                # Hybrid extraction: get text data directly from PDF
+                if os.path.exists(dd.file_path):
+                    hybrid_data = build_hybrid_context(dd.file_path, relevant)
+                    if hybrid_data.get("text_context"):
+                        hybrid_text = f"\nDIRECTLY EXTRACTED DATA (doc_id: {dd.id}, high accuracy):\n{hybrid_data['text_context'][:6000]}"
+                        doc_context = (doc_context + "\n" + hybrid_text) if doc_context else hybrid_text
+
+                    use_vision = should_use_vision(hybrid_data.get("pdf_type", "raster"), body.message)
+                else:
+                    use_vision = True
+
+                if use_vision:
+                    for page_num in relevant:
+                        page_result = await db.execute(
+                            select(DocumentPage).where(
+                                DocumentPage.document_id == dd.id,
+                                DocumentPage.page_number == page_num,
+                            ).order_by(DocumentPage.id.desc()).limit(1)
+                        )
+                        page = page_result.scalar_one_or_none()
+                        if page and page.image_path and os.path.exists(page.image_path):
+                            img = Image.open(page.image_path)
+                            w, h = img.size
+                            if max(w, h) > 4000:
+                                scale = 4000 / max(w, h)
+                                img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+                            if img.mode in ("RGBA", "P"):
+                                img = img.convert("RGB")
+                            buf = io.BytesIO()
+                            img.save(buf, format="JPEG", quality=75)
+                            img_b64 = base64.standard_b64encode(buf.getvalue()).decode("ascii")
+                            drawing_images.append({
+                                "page_number": page_num,
+                                "base64": img_b64,
+                                "doc_id": dd.id,
+                            })
 
             if drawing_images:
                 logger.info("drawing_images_loaded", count=len(drawing_images))

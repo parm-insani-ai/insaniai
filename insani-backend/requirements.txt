@@ -21,6 +21,7 @@ pypdf==4.3.0         # PDF text extraction for document citations
 # Blueprint/Drawing analysis
 pdf2image==1.17.0    # PDF page rendering to images (requires poppler-utils)
 Pillow==11.1.0       # Image processing for blueprint rendering
+pdfplumber==0.11.9   # Direct text/dimension extraction from vector PDFs
 
 # Integrations
 cryptography==43.0.0  # Token encryption for OAuth storage
