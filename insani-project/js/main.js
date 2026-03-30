@@ -123,9 +123,6 @@ async function handleSignup(e) {
     btn.disabled = true; btn.textContent = 'Creating account…';
     await apiSignup(email, pass, name, org);
 
-    // Seed demo projects for new user
-    await seedDemoProjects();
-
     await initApp();
     btn.disabled = false; btn.textContent = 'Create account';
   } catch (err) {

@@ -110,45 +110,16 @@ async function selectProject(id) {
 
 function renderDashboard(project) {
   const d = project.data_json || {};
-  const openRFIs = (d.rfis || []).filter(r => r.status === 'Open').length;
   const dashHTML = `
     <div class="dash-h">
       <h1>Project Overview</h1>
       <p>${esc(project.name)} — real-time intelligence across all sources</p>
     </div>
-    <div class="dash-grid">
-      <div class="dash-card" onclick="dashCardClick('rfis')"><div class="dash-card-label">Open RFIs</div><div class="dash-card-val" style="color:var(--orange)">${openRFIs}</div></div>
-      <div class="dash-card" onclick="dashCardClick('budget')"><div class="dash-card-label">Budget Variance</div><div class="dash-card-val" style="color:var(--red)">${d.variance || '—'}</div></div>
-      <div class="dash-card" onclick="dashCardClick('schedule')"><div class="dash-card-label">Schedule</div><div class="dash-card-val" style="color:var(--orange)">${d.schedule || '—'}</div></div>
-      <div class="dash-card" onclick="dashCardClick('completion')"><div class="dash-card-label">Completion</div><div class="dash-card-val" style="color:var(--green)">${d.pct || 0}%</div></div>
-    </div>
-    <div class="dash-alerts-title">AI-Detected Alerts</div>
-    <div class="dash-alerts">
-      ${(d.rfis || []).filter(r => r.status === 'Open').map(r => `
-        <div class="da" onclick="ask('Tell me about ${esc(r.id)} — ${esc(r.title)}')">
-          <div class="da-dot ${r.pri === 'Critical' ? 'da-dot-red' : 'da-dot-orange'}"></div>
-          <div>
-            <div class="da-title">${esc(r.id)} — ${esc(r.title)}</div>
-            <div class="da-meta">${esc(r.impact || '')}</div>
-            <div class="da-src">${esc(r.src || 'Procore')} • ${r.days}d open</div>
-          </div>
-        </div>
-      `).join('')}
-      ${(d.rfis || []).filter(r => r.status === 'Open').length === 0 ? '<div style="color:var(--text-dim);font-size:0.85rem;padding:1rem">No active alerts</div>' : ''}
+    <div style="padding:2rem;text-align:center;color:var(--text-dim);font-size:0.9rem">
+      <p>No project data yet. Connect integrations or upload documents to see insights here.</p>
     </div>
   `;
   document.getElementById('dashView').innerHTML = dashHTML;
-}
-
-// ── Dashboard card clicks ──
-function dashCardClick(topic) {
-  const questions = {
-    rfis:       'Give me a full breakdown of all open RFIs, their priority, assignees, and days open.',
-    budget:     'Break down the full budget status by trade, including all change orders.',
-    schedule:   'Walk me through every milestone and its current risk level.',
-    completion: 'What work has been completed and what are the major remaining scopes?'
-  };
-  ask(questions[topic] || 'Summarize the project status.');
 }
 
 // ── New chat ──
