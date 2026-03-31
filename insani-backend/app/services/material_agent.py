@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.config import settings
+from app.services.web_search import search_material_prices, search_supplier
 from app.models.db_models import Document
 from app.services.document_service import get_document_with_pages
 from app.services.hybrid_extraction import build_hybrid_context
@@ -266,9 +267,32 @@ async def run_material_analysis(
             "materials": [],
             "pricing": {},
             "recommendations": "",
+            "web_results": [],
         }
 
-    # Step 2: Estimate pricing
+    # Step 1.5: Search web for real prices on top materials
+    web_results = []
+    try:
+        # Search for the top 5 most important materials
+        top_materials = materials[:5]
+        for mat in top_materials:
+            name = mat.get("name", "")
+            if name:
+                prices = await search_material_prices(name, "Halifax NS")
+                if prices:
+                    web_results.append({"material": name, "sources": prices})
+        logger.info("web_price_search_done", materials_searched=len(top_materials), results=len(web_results))
+    except Exception as e:
+        logger.warning("web_price_search_failed", error=str(e))
+
+    # Inject web results into the pricing step
+    if web_results:
+        for mat in materials:
+            for wr in web_results:
+                if wr["material"].lower() == mat.get("name", "").lower():
+                    mat["web_prices"] = wr["sources"]
+
+    # Step 2: Estimate pricing (now with web data)
     pricing = await estimate_pricing(materials)
 
     # Step 3: Generate recommendations
@@ -284,6 +308,7 @@ async def run_material_analysis(
         "summary": pricing.get("summary", {}),
         "recommendations": recommendations,
         "suppliers": LOCAL_SUPPLIERS,
+        "web_results": web_results,
     }
 
 

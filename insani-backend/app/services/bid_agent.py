@@ -16,6 +16,7 @@ import anthropic
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
+from app.services.web_search import search_construction_jobs
 
 from app.config import settings
 from app.models.db_models import Document
@@ -392,6 +393,14 @@ async def run_bid_analysis(
     # Step 4: Generate proposal
     proposal_html = await generate_proposal(scope, estimate, compliance)
 
+    # Step 5: Search for similar live tenders in Halifax
+    live_jobs = []
+    try:
+        live_jobs = await search_construction_jobs("Halifax Nova Scotia")
+        logger.info("live_jobs_found", count=len(live_jobs))
+    except Exception as e:
+        logger.warning("live_job_search_failed", error=str(e))
+
     logger.info("bid_agent_complete",
         scope_items=len(scope.get("scope_items", [])),
         line_items=len(estimate.get("line_items", [])),
@@ -405,6 +414,7 @@ async def run_bid_analysis(
         "compliance": compliance,
         "proposal_html": proposal_html,
         "job_sources": JOB_POSTING_SOURCES,
+        "live_jobs": live_jobs,
     }
 
 

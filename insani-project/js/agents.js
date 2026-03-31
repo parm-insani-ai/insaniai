@@ -141,6 +141,23 @@ function renderMaterialResults(result) {
     html += '</ul>';
   }
 
+  // Web price research
+  var webResults = result.web_results || [];
+  if (webResults.length) {
+    html += '<h3 style="font-size:0.88rem;margin:1.2rem 0 0.5rem">Live Web Price Research (' + webResults.length + ' materials searched)</h3>';
+    webResults.forEach(function(wr) {
+      html += '<div class="disc-item" style="margin-bottom:0.5rem">' +
+        '<div class="disc-item-header"><span class="disc-item-title">' + esc(wr.material) + '</span></div>' +
+        '<div class="disc-item-body" style="font-size:0.75rem">';
+      (wr.sources || []).forEach(function(src) {
+        var prices = (src.prices_found || []).join(', ') || 'No prices found on page';
+        html += '<div style="margin:0.3rem 0"><a href="' + esc(src.source) + '" target="_blank" style="color:var(--blue);text-decoration:none">' + esc(src.title || src.source).substring(0, 80) + '</a>' +
+          '<br><span style="color:var(--green)">' + esc(prices) + '</span></div>';
+      });
+      html += '</div></div>';
+    });
+  }
+
   // AI Recommendations
   if (result.recommendations) {
     html += '<h3 style="font-size:0.88rem;margin:1.2rem 0 0.5rem">AI Recommendations</h3>' +
@@ -275,9 +292,20 @@ function renderBidResults(result) {
       result.proposal_html + '</div>';
   }
 
-  // Job sources
+  // Live job postings from web search
+  var liveJobs = result.live_jobs || [];
+  if (liveJobs.length) {
+    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem">Live Halifax Construction Tenders (' + liveJobs.length + ' found)</h3>';
+    liveJobs.forEach(function(job) {
+      html += '<div class="disc-item" style="margin-bottom:0.5rem">' +
+        '<div class="disc-item-header"><a href="' + esc(job.source) + '" target="_blank" style="color:var(--blue);text-decoration:none;font-size:0.8rem">' + esc(job.title || 'View Tender').substring(0, 100) + '</a></div>' +
+        '<div class="disc-item-body" style="font-size:0.72rem;color:var(--text-dim);max-height:60px;overflow:hidden">' + esc((job.content || '').substring(0, 200)) + '</div></div>';
+    });
+  }
+
+  // Job sources directory
   if (result.job_sources) {
-    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem">Find More Halifax Projects</h3>' +
+    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem">Halifax Job Source Directory</h3>' +
       '<div style="font-size:0.78rem;color:var(--text-secondary)">';
     result.job_sources.forEach(function(src) {
       html += '<div style="margin:0.4rem 0"><strong>' + esc(src.name) + '</strong> — ' + esc(src.type) + '<br>' +
