@@ -23,6 +23,8 @@ function showChat() {
   if (dv) dv.classList.add('vh');
   if (iv) { iv.classList.add('vh'); iv.style.display = 'none'; }
   if (dcv) { dcv.classList.add('vh'); dcv.style.display = 'none'; }
+  var agv = document.getElementById('agentView');
+  if (agv) { agv.classList.add('vh'); agv.style.display = 'none'; }
   if (ia) { ia.classList.remove('vh'); ia.style.display = ''; }
 }
 

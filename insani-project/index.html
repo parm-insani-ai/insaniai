@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>insani — Construction AI Copilot</title>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tokens.css?v=10">
-  <link rel="stylesheet" href="css/layout.css?v=10">
-  <link rel="stylesheet" href="css/components.css?v=10">
-  <link rel="stylesheet" href="css/chat.css?v=10">
-  <link rel="stylesheet" href="css/panels.css?v=10">
-  <link rel="stylesheet" href="css/dashboard.css?v=10">
-  <link rel="stylesheet" href="css/responsive.css?v=10">
+  <link rel="stylesheet" href="css/tokens.css?v=11">
+  <link rel="stylesheet" href="css/layout.css?v=11">
+  <link rel="stylesheet" href="css/components.css?v=11">
+  <link rel="stylesheet" href="css/chat.css?v=11">
+  <link rel="stylesheet" href="css/panels.css?v=11">
+  <link rel="stylesheet" href="css/dashboard.css?v=11">
+  <link rel="stylesheet" href="css/responsive.css?v=11">
 </head>
 <body>
 
@@ -47,6 +47,9 @@
 
 <!-- Compare Modal (spec vs submittal selector) -->
 <div class="source-modal" id="compareModal" onclick="if(event.target===this)closeCompareModal()"></div>
+
+<!-- Agent Modal (material/bid doc selector) -->
+<div class="source-modal" id="agentModal" onclick="if(event.target===this)closeMaterialModal();closeBidModal()"></div>
 
 <div class="source-modal" id="sourceModal" onclick="if(event.target===this)closeSourceModal()">
   <div class="source-modal-inner">
@@ -170,6 +173,17 @@
           + Compare Spec vs Submittal
         </button>
       </div>
+
+      <!-- AI Agents -->
+      <div class="sb-section">
+        <div class="sb-label">AI Agents</div>
+        <button class="doc-upload-btn" onclick="showMaterialModal()" style="border-style:solid;text-align:center">
+          Material Price Tracker
+        </button>
+        <button class="doc-upload-btn" onclick="showBidModal()" style="border-style:solid;text-align:center;margin-top:0.25rem">
+          Bid Estimating Assistant
+        </button>
+      </div>
     </div>
     <div class="user-menu-wrap">
       <div class="user-menu" id="userMenu">
@@ -237,6 +251,7 @@
     <div class="dashboard vh" id="dashView"></div>
     <div class="integ-view vh" id="integrationsView" style="overflow-y:auto;height:100%"></div>
     <div class="disc-view vh" id="discrepancyView" style="overflow-y:auto;height:100%"></div>
+    <div class="agent-view vh" id="agentView" style="overflow-y:auto;height:100%"></div>
 
     <div class="input-area">
       <div id="chipBox" class="file-chips" style="display:none"></div>
@@ -256,16 +271,17 @@
 </div>
 
 <!-- Scripts -->
-<script src="js/data.js?v=10"></script>
-<script src="js/api.js?v=10"></script>
-<script src="js/chat.js?v=10"></script>
-<script src="js/files.js?v=10"></script>
-<script src="js/panels.js?v=10"></script>
-<script src="js/documents.js?v=10"></script>
-<script src="js/drawings.js?v=10"></script>
-<script src="js/discrepancies.js?v=10"></script>
-<script src="js/integrations.js?v=10"></script>
-<script src="js/nav.js?v=10"></script>
-<script src="js/main.js?v=10"></script>
+<script src="js/data.js?v=11"></script>
+<script src="js/api.js?v=11"></script>
+<script src="js/chat.js?v=11"></script>
+<script src="js/files.js?v=11"></script>
+<script src="js/panels.js?v=11"></script>
+<script src="js/documents.js?v=11"></script>
+<script src="js/drawings.js?v=11"></script>
+<script src="js/discrepancies.js?v=11"></script>
+<script src="js/agents.js?v=11"></script>
+<script src="js/integrations.js?v=11"></script>
+<script src="js/nav.js?v=11"></script>
+<script src="js/main.js?v=11"></script>
 </body>
 </html>
