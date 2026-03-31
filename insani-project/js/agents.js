@@ -22,28 +22,41 @@ async function apiRunBidAnalysis(docIds, projectId) {
 // ═══ MATERIAL PRICE TRACKER ═══
 
 function showMaterialModal() {
-  if (!activeProjectId) { showToast('Select a project first'); return; }
-  if (!projectDocuments.length) { showToast('Upload documents first'); return; }
+  if (!activeProjectId) { showToast('Create a project first'); return; }
+  if (!projectDocuments.length) { showToast('Upload documents first — specs, drawings, or material lists'); return; }
 
-  var html = '<div class="disc-modal-content">' +
-    '<h3 style="margin:0 0 0.5rem;font-size:1rem;font-weight:500">Material Price Analysis</h3>' +
-    '<p style="color:var(--text-muted);font-size:0.78rem;margin:0 0 1rem">Select documents to extract materials and estimate pricing from Halifax suppliers</p>' +
-    '<div id="materialDocCheckboxes">' +
+  var html = '<div class="agent-modal-inner">' +
+    '<div class="agent-modal-header">' +
+    '<h3>Material Price Analysis</h3>' +
+    '<button class="dv-close" onclick="closeAgentModal()">&#10005;</button>' +
+    '</div>' +
+    '<p class="agent-modal-desc">Select which documents contain material information. The agent will extract materials, find pricing from Halifax suppliers, and recommend cost savings.</p>' +
+    '<div class="agent-doc-list" id="materialDocCheckboxes">' +
     projectDocuments.map(function(d) {
-      return '<label class="disc-check"><input type="checkbox" value="' + d.id + '" checked> ' + esc(d.filename) + '</label>';
+      return '<label class="agent-doc-check"><input type="checkbox" value="' + d.id + '"><span class="agent-doc-name">' + esc(d.filename) + '</span><span class="agent-doc-meta">' + d.page_count + ' pages</span></label>';
     }).join('') +
     '</div>' +
-    '<div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">' +
-    '<button class="disc-btn disc-btn-cancel" onclick="closeMaterialModal()">Cancel</button>' +
-    '<button class="disc-btn disc-btn-run" onclick="runMaterialAnalysis()">Analyze Materials</button>' +
+    '<div class="agent-select-actions">' +
+    '<button class="agent-select-btn" onclick="toggleAllChecks(\'materialDocCheckboxes\', true)">Select all</button>' +
+    '<button class="agent-select-btn" onclick="toggleAllChecks(\'materialDocCheckboxes\', false)">Deselect all</button>' +
+    '</div>' +
+    '<div class="agent-modal-footer">' +
+    '<button class="disc-btn disc-btn-cancel" onclick="closeAgentModal()">Cancel</button>' +
+    '<button class="disc-btn disc-btn-run" id="materialRunBtn" onclick="runMaterialAnalysis()">Analyze Materials</button>' +
     '</div></div>';
 
   document.getElementById('agentModal').innerHTML = html;
   document.getElementById('agentModal').classList.add('open');
 }
 
-function closeMaterialModal() {
+function closeAgentModal() {
   document.getElementById('agentModal').classList.remove('open');
+}
+
+function toggleAllChecks(containerId, checked) {
+  document.querySelectorAll('#' + containerId + ' input[type=checkbox]').forEach(function(cb) {
+    cb.checked = checked;
+  });
 }
 
 async function runMaterialAnalysis() {
@@ -51,15 +64,19 @@ async function runMaterialAnalysis() {
   document.querySelectorAll('#materialDocCheckboxes input:checked').forEach(function(cb) { docIds.push(parseInt(cb.value)); });
   if (!docIds.length) { showToast('Select at least one document'); return; }
 
-  closeMaterialModal();
-  showToast('Analyzing materials... this takes 30-60 seconds');
+  // Disable button and show loading
+  var btn = document.getElementById('materialRunBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Analyzing...'; }
+
+  closeAgentModal();
+  showAgentView();
+  document.getElementById('agentView').innerHTML = '<div class="agent-loading"><div class="agent-loading-spin"></div><div>Analyzing materials...<br><span style="font-size:0.75rem;color:var(--text-dim)">Step 1: Extracting materials from documents<br>Step 2: Estimating pricing from Halifax suppliers<br>Step 3: Generating cost recommendations</span></div></div>';
 
   try {
     var result = await apiRunMaterialAnalysis(docIds, activeProjectId);
     renderMaterialResults(result);
-    showAgentView();
   } catch (e) {
-    showToast('Material analysis failed: ' + e.message);
+    document.getElementById('agentView').innerHTML = '<div class="disc-report"><div class="disc-report-header"><button class="disc-back" onclick="showChat()">← Back to chat</button><h2>Material Price Analysis</h2></div><div class="disc-summary" style="color:var(--red)">Analysis failed: ' + esc(e.message) + '<br><br>Make sure your .env file has the ANTHROPIC_API_KEY set.</div></div>';
   }
 }
 
@@ -70,14 +87,16 @@ function renderMaterialResults(result) {
     '<div class="disc-report-header">' +
     '<button class="disc-back" onclick="showChat()">← Back to chat</button>' +
     '<h2>Material Price Analysis</h2>' +
+    '<div style="display:flex;gap:0.4rem">' +
     '<div class="disc-status disc-status-' + result.status + '">' + result.status + '</div>' +
-    '</div>';
+    '<button class="disc-btn disc-btn-cancel" onclick="exportToPDF()" style="font-size:0.65rem">Export PDF</button>' +
+    '</div></div>';
 
   if (result.error) {
     html += '<div class="disc-summary" style="color:var(--red)">' + esc(result.error) + '</div>';
   }
 
-  // Summary
+  // Summary stats
   var s = result.summary || {};
   if (s.total_mid) {
     html += '<div class="disc-stats">' +
@@ -86,14 +105,14 @@ function renderMaterialResults(result) {
       '<div class="disc-stat"><span class="disc-stat-num" style="color:var(--orange)">$' + formatNum(s.total_high) + '</span><span>High Estimate</span></div>' +
       '<div class="disc-stat"><span class="disc-stat-num">' + (result.materials_found || 0) + '</span><span>Materials</span></div>' +
       '</div>';
-    if (s.tax_note) html += '<p style="font-size:0.72rem;color:var(--text-dim);margin:-0.5rem 0 1rem">' + esc(s.tax_note) + '</p>';
+    if (s.tax_note) html += '<p style="font-size:0.72rem;color:var(--text-dim);margin:-0.5rem 0 1rem">' + esc(s.tax_note) + ' | All prices in CAD</p>';
   }
 
   // Materials table
   var mats = result.materials || [];
   if (mats.length) {
-    html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem">Material Pricing</h3>' +
-      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.78rem">' +
+    html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem">Material Pricing (' + mats.length + ' items)</h3>' +
+      '<div style="overflow-x:auto" id="materialTable"><table style="width:100%;border-collapse:collapse;font-size:0.78rem">' +
       '<thead><tr style="background:var(--surface);text-align:left">' +
       '<th style="padding:0.5rem">Material</th>' +
       '<th style="padding:0.5rem">Qty</th>' +
@@ -105,7 +124,7 @@ function renderMaterialResults(result) {
     mats.forEach(function(m) {
       html += '<tr style="border-bottom:1px solid var(--border)">' +
         '<td style="padding:0.4rem 0.5rem"><strong>' + esc(m.name || '') + '</strong><br><span style="color:var(--text-dim);font-size:0.7rem">' + esc(m.specification || '') + '</span></td>' +
-        '<td style="padding:0.4rem 0.5rem">' + esc(m.quantity || '-') + '</td>' +
+        '<td style="padding:0.4rem 0.5rem">' + esc(String(m.quantity || '-')) + '</td>' +
         '<td style="padding:0.4rem 0.5rem;color:var(--green)">$' + formatNum(m.total_low) + '</td>' +
         '<td style="padding:0.4rem 0.5rem;color:var(--blue)">$' + formatNum(m.total_mid) + '</td>' +
         '<td style="padding:0.4rem 0.5rem;color:var(--orange)">$' + formatNum(m.total_high) + '</td>' +
@@ -135,28 +154,31 @@ function renderMaterialResults(result) {
 // ═══ BID ESTIMATING ASSISTANT ═══
 
 function showBidModal() {
-  if (!activeProjectId) { showToast('Select a project first'); return; }
+  if (!activeProjectId) { showToast('Create a project first'); return; }
   if (!projectDocuments.length) { showToast('Upload ITB/RFP documents first'); return; }
 
-  var html = '<div class="disc-modal-content">' +
-    '<h3 style="margin:0 0 0.5rem;font-size:1rem;font-weight:500">Bid Estimating Assistant</h3>' +
-    '<p style="color:var(--text-muted);font-size:0.78rem;margin:0 0 1rem">Upload your ITB/RFP documents and get a complete bid proposal with Halifax-specific pricing</p>' +
-    '<div id="bidDocCheckboxes">' +
+  var html = '<div class="agent-modal-inner">' +
+    '<div class="agent-modal-header">' +
+    '<h3>Bid Estimating Assistant</h3>' +
+    '<button class="dv-close" onclick="closeAgentModal()">&#10005;</button>' +
+    '</div>' +
+    '<p class="agent-modal-desc">Select your ITB/RFP documents. The agent will extract scope, estimate costs with Halifax rates, check NS Building Code compliance, and generate a bid proposal.</p>' +
+    '<div class="agent-doc-list" id="bidDocCheckboxes">' +
     projectDocuments.map(function(d) {
-      return '<label class="disc-check"><input type="checkbox" value="' + d.id + '" checked> ' + esc(d.filename) + '</label>';
+      return '<label class="agent-doc-check"><input type="checkbox" value="' + d.id + '"><span class="agent-doc-name">' + esc(d.filename) + '</span><span class="agent-doc-meta">' + d.page_count + ' pages</span></label>';
     }).join('') +
     '</div>' +
-    '<div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">' +
-    '<button class="disc-btn disc-btn-cancel" onclick="closeBidModal()">Cancel</button>' +
-    '<button class="disc-btn disc-btn-run" onclick="runBidAnalysis()">Generate Bid</button>' +
+    '<div class="agent-select-actions">' +
+    '<button class="agent-select-btn" onclick="toggleAllChecks(\'bidDocCheckboxes\', true)">Select all</button>' +
+    '<button class="agent-select-btn" onclick="toggleAllChecks(\'bidDocCheckboxes\', false)">Deselect all</button>' +
+    '</div>' +
+    '<div class="agent-modal-footer">' +
+    '<button class="disc-btn disc-btn-cancel" onclick="closeAgentModal()">Cancel</button>' +
+    '<button class="disc-btn disc-btn-run" id="bidRunBtn" onclick="runBidAnalysis()">Generate Bid</button>' +
     '</div></div>';
 
   document.getElementById('agentModal').innerHTML = html;
   document.getElementById('agentModal').classList.add('open');
-}
-
-function closeBidModal() {
-  document.getElementById('agentModal').classList.remove('open');
 }
 
 async function runBidAnalysis() {
@@ -164,15 +186,18 @@ async function runBidAnalysis() {
   document.querySelectorAll('#bidDocCheckboxes input:checked').forEach(function(cb) { docIds.push(parseInt(cb.value)); });
   if (!docIds.length) { showToast('Select at least one document'); return; }
 
-  closeBidModal();
-  showToast('Generating bid proposal... this takes 1-2 minutes');
+  var btn = document.getElementById('bidRunBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+
+  closeAgentModal();
+  showAgentView();
+  document.getElementById('agentView').innerHTML = '<div class="agent-loading"><div class="agent-loading-spin"></div><div>Generating bid proposal...<br><span style="font-size:0.75rem;color:var(--text-dim)">Step 1: Extracting scope from ITB/RFP<br>Step 2: Estimating costs with Halifax rates<br>Step 3: Checking NS Building Code compliance<br>Step 4: Writing bid proposal</span></div></div>';
 
   try {
     var result = await apiRunBidAnalysis(docIds, activeProjectId);
     renderBidResults(result);
-    showAgentView();
   } catch (e) {
-    showToast('Bid analysis failed: ' + e.message);
+    document.getElementById('agentView').innerHTML = '<div class="disc-report"><div class="disc-report-header"><button class="disc-back" onclick="showChat()">← Back to chat</button><h2>Bid Proposal</h2></div><div class="disc-summary" style="color:var(--red)">Bid analysis failed: ' + esc(e.message) + '<br><br>Make sure your .env file has the ANTHROPIC_API_KEY set.</div></div>';
   }
 }
 
@@ -183,8 +208,10 @@ function renderBidResults(result) {
     '<div class="disc-report-header">' +
     '<button class="disc-back" onclick="showChat()">← Back to chat</button>' +
     '<h2>Bid Proposal</h2>' +
+    '<div style="display:flex;gap:0.4rem">' +
     '<div class="disc-status disc-status-' + result.status + '">' + result.status + '</div>' +
-    '</div>';
+    '<button class="disc-btn disc-btn-cancel" onclick="exportToPDF()" style="font-size:0.65rem">Export PDF</button>' +
+    '</div></div>';
 
   if (result.error) {
     html += '<div class="disc-summary" style="color:var(--red)">' + esc(result.error) + '</div>';
@@ -214,10 +241,10 @@ function renderBidResults(result) {
       '</div>';
   }
 
-  // Compliance
+  // Compliance issues
   var comp = result.compliance || {};
   if (comp.issues && comp.issues.length) {
-    html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem">Code Compliance Issues (' + comp.issues.length + ')</h3>';
+    html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem">NS Building Code Compliance (' + comp.issues.length + ' items)</h3>';
     comp.issues.forEach(function(issue) {
       var color = issue.severity === 'critical' ? 'var(--red)' : issue.severity === 'warning' ? 'var(--orange)' : 'var(--blue)';
       html += '<div class="disc-item" style="border-left-color:' + color + ';margin-bottom:0.5rem">' +
@@ -244,13 +271,13 @@ function renderBidResults(result) {
   // Full proposal
   if (result.proposal_html) {
     html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem">Full Proposal Document</h3>' +
-      '<div style="border:1px solid var(--border);border-radius:10px;padding:1.2rem;background:var(--bg-chat)">' +
+      '<div style="border:1px solid var(--border);border-radius:10px;padding:1.2rem;background:var(--bg-chat)" id="proposalContent">' +
       result.proposal_html + '</div>';
   }
 
   // Job sources
   if (result.job_sources) {
-    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem">Find More Projects</h3>' +
+    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem">Find More Halifax Projects</h3>' +
       '<div style="font-size:0.78rem;color:var(--text-secondary)">';
     result.job_sources.forEach(function(src) {
       html += '<div style="margin:0.4rem 0"><strong>' + esc(src.name) + '</strong> — ' + esc(src.type) + '<br>' +
@@ -261,6 +288,45 @@ function renderBidResults(result) {
 
   html += '</div>';
   view.innerHTML = html;
+}
+
+// ═══ PDF EXPORT ═══
+
+function exportToPDF() {
+  // Get the current report content
+  var reportEl = document.querySelector('.disc-report');
+  if (!reportEl) { showToast('No report to export'); return; }
+
+  // Open print dialog — the browser's Print to PDF handles formatting
+  var printWindow = window.open('', '_blank');
+  printWindow.document.write('<!DOCTYPE html><html><head><title>insani Report</title>' +
+    '<style>' +
+    'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #1a1a1a; font-size: 12px; }' +
+    'h2 { font-size: 18px; margin-bottom: 0.5rem; }' +
+    'h3 { font-size: 14px; margin: 1rem 0 0.5rem; }' +
+    'table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }' +
+    'th, td { padding: 6px 8px; border-bottom: 1px solid #e0e0e0; text-align: left; font-size: 11px; }' +
+    'th { background: #f5f5f5; font-weight: 600; }' +
+    'strong { font-weight: 600; }' +
+    '.disc-stats { display: flex; gap: 8px; margin: 0.5rem 0; }' +
+    '.disc-stat { flex: 1; text-align: center; padding: 8px; border: 1px solid #e0e0e0; border-radius: 6px; }' +
+    '.disc-stat-num { display: block; font-size: 18px; font-weight: 400; }' +
+    '.disc-summary { background: #f8f8f8; padding: 10px; border-radius: 6px; margin: 0.5rem 0; }' +
+    '.disc-back, .disc-status, .disc-btn, .sb-delete, button { display: none !important; }' +
+    '.disc-item { border: 1px solid #e0e0e0; border-radius: 6px; margin: 0.4rem 0; overflow: hidden; }' +
+    '.disc-item-header { padding: 6px 10px; background: #f8f8f8; }' +
+    '.disc-item-body { padding: 8px 10px; }' +
+    '.disc-recommendation { background: #f8f8f8; padding: 8px; border-radius: 6px; margin: 0.3rem 0; }' +
+    'p { margin: 0.3rem 0; }' +
+    '@media print { body { padding: 0; } }' +
+    '</style></head><body>');
+  printWindow.document.write('<div style="text-align:center;margin-bottom:1rem"><h1 style="font-size:20px;margin:0">insani</h1><p style="color:#888;font-size:11px">Construction Intelligence Report — ' + new Date().toLocaleDateString() + '</p></div>');
+  printWindow.document.write(reportEl.innerHTML);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+
+  // Trigger print after content loads
+  printWindow.onload = function() { printWindow.print(); };
 }
 
 // ═══ VIEW MANAGEMENT ═══
