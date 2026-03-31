@@ -92,22 +92,30 @@ async function deleteDiscrepancyReport(reportId) {
 // ═══ DOCUMENT SELECTOR MODAL ═══
 
 function showCompareModal() {
-  if (!activeProjectId) { showToast('Select a project first'); return; }
-  if (!projectDocuments.length) { showToast('Upload documents first'); return; }
+  if (!activeProjectId) { showToast('Create a project first'); return; }
+
+  var specDocsHtml = projectDocuments.length ?
+    projectDocuments.map(function(d) {
+      return '<label class="disc-check"><input type="checkbox" value="' + d.id + '" name="spec"> ' + esc(d.filename) + '</label>';
+    }).join('') :
+    '<div style="color:var(--text-dim);font-size:0.78rem;padding:0.5rem">No documents yet — upload below</div>';
+
+  var subDocsHtml = projectDocuments.length ?
+    projectDocuments.map(function(d) {
+      return '<label class="disc-check"><input type="checkbox" value="' + d.id + '" name="submittal"> ' + esc(d.filename) + '</label>';
+    }).join('') :
+    '<div style="color:var(--text-dim);font-size:0.78rem;padding:0.5rem">No documents yet — upload below</div>';
 
   var html = '<div class="disc-modal-content">' +
     '<h3 style="margin:0 0 0.5rem;font-size:1rem;font-weight:500">Compare Spec vs Submittal</h3>' +
-    '<p style="color:var(--text-muted);font-size:0.78rem;margin:0 0 1rem">Select which documents are specs and which are submittals</p>' +
+    '<p style="color:var(--text-muted);font-size:0.78rem;margin:0 0 0.5rem">Upload or select documents. Check which are specs and which are submittals.</p>' +
+    '<div class="agent-upload-inline" style="margin-bottom:0.75rem"><label class="disc-btn disc-btn-cancel" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem">+ Upload file<input type="file" accept=".pdf" onchange="compareInlineUpload(this)" style="display:none"></label></div>' +
     '<div class="disc-doc-grid">' +
     '<div class="disc-col"><div class="disc-col-label">Specifications</div><div id="specCheckboxes">' +
-    projectDocuments.map(function(d) {
-      return '<label class="disc-check"><input type="checkbox" value="' + d.id + '" name="spec"> ' + esc(d.filename) + '</label>';
-    }).join('') +
+    specDocsHtml +
     '</div></div>' +
     '<div class="disc-col"><div class="disc-col-label">Submittals</div><div id="submittalCheckboxes">' +
-    projectDocuments.map(function(d) {
-      return '<label class="disc-check"><input type="checkbox" value="' + d.id + '" name="submittal"> ' + esc(d.filename) + '</label>';
-    }).join('') +
+    subDocsHtml +
     '</div></div>' +
     '</div>' +
     '<div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">' +
@@ -121,6 +129,40 @@ function showCompareModal() {
 
 function closeCompareModal() {
   document.getElementById('compareModal').classList.remove('open');
+}
+
+async function compareInlineUpload(inputEl) {
+  var file = inputEl.files[0];
+  if (!file) return;
+  inputEl.value = '';
+  if (!activeProjectId) { showToast('No project selected'); return; }
+
+  showToast('Uploading ' + file.name + '...');
+  var formData = new FormData();
+  formData.append('file', file);
+  formData.append('project_id', activeProjectId);
+
+  try {
+    var res = await fetch(API_BASE + '/v1/documents/upload', {
+      method: 'POST',
+      headers: accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {},
+      body: formData
+    });
+    if (!res.ok) throw new Error('Upload failed');
+    var doc = await res.json();
+    await loadProjectDocuments();
+
+    // Add to both spec and submittal checkbox lists
+    var newCheck = '<label class="disc-check"><input type="checkbox" value="' + doc.id + '"> ' + esc(doc.filename) + '</label>';
+    var specContainer = document.getElementById('specCheckboxes');
+    var subContainer = document.getElementById('submittalCheckboxes');
+    if (specContainer) specContainer.insertAdjacentHTML('beforeend', newCheck.replace('name="spec"', ''));
+    if (subContainer) subContainer.insertAdjacentHTML('beforeend', newCheck);
+
+    showToast(file.name + ' uploaded');
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+  }
 }
 
 async function runComparison() {

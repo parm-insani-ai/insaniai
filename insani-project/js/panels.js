@@ -64,6 +64,56 @@ function showSourceDetail(key) {
   closeSourceModal();
 }
 
+// ── Share & Invite modals ──
+
+function showShareModal() {
+  var url = window.location.href;
+  var html = '<div class="agent-modal-inner">' +
+    '<div class="agent-modal-header"><h3>Share</h3><button class="dv-close" onclick="closeShareModal()">&#10005;</button></div>' +
+    '<p class="agent-modal-desc">Share a link to this workspace with your team.</p>' +
+    '<div style="display:flex;gap:0.5rem;margin-bottom:1rem">' +
+    '<input type="text" id="shareLink" value="' + esc(url) + '" readonly style="flex:1;padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-size:0.8rem;background:var(--surface);color:var(--text);font-family:var(--mono)">' +
+    '<button class="disc-btn disc-btn-run" onclick="copyShareLink()">Copy</button>' +
+    '</div></div>';
+  document.getElementById('shareModal').innerHTML = html;
+  document.getElementById('shareModal').classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('shareModal').classList.remove('open');
+}
+
+function copyShareLink() {
+  var input = document.getElementById('shareLink');
+  input.select();
+  document.execCommand('copy');
+  showToast('Link copied to clipboard');
+}
+
+function showInviteModal() {
+  var html = '<div class="agent-modal-inner">' +
+    '<div class="agent-modal-header"><h3>Invite Team Member</h3><button class="dv-close" onclick="closeInviteModal()">&#10005;</button></div>' +
+    '<p class="agent-modal-desc">Enter an email address to invite someone to collaborate.</p>' +
+    '<input type="email" id="inviteEmail" placeholder="colleague@company.com" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;margin-bottom:0.75rem;background:var(--bg-chat);color:var(--text)">' +
+    '<div style="display:flex;gap:0.5rem;justify-content:flex-end">' +
+    '<button class="disc-btn disc-btn-cancel" onclick="closeInviteModal()">Cancel</button>' +
+    '<button class="disc-btn disc-btn-run" onclick="sendInvite()">Send Invite</button>' +
+    '</div></div>';
+  document.getElementById('inviteModal').innerHTML = html;
+  document.getElementById('inviteModal').classList.add('open');
+}
+
+function closeInviteModal() {
+  document.getElementById('inviteModal').classList.remove('open');
+}
+
+function sendInvite() {
+  var email = document.getElementById('inviteEmail').value.trim();
+  if (!email) { showToast('Enter an email address'); return; }
+  closeInviteModal();
+  showToast('Invite sent to ' + email);
+}
+
 function closeSourceModal() {
   document.getElementById('sourceModal').classList.remove('open');
 }
@@ -99,18 +149,14 @@ function closeAllPanels(except) {
   if (except !== 'notifPanel') document.getElementById('notifPanel').classList.remove('open');
   if (except !== 'sourceModal') document.getElementById('sourceModal').classList.remove('open');
   if (except !== 'userMenu') document.getElementById('userMenu').classList.remove('open');
-  if (except !== 'projectMenu') document.getElementById('projectMenu').classList.remove('open');
 }
 
 document.addEventListener('click', function(e) {
   var np = document.getElementById('notifPanel');
   var nb = document.getElementById('notifBtn');
-  if (np.classList.contains('open') && !np.contains(e.target) && !nb.contains(e.target)) np.classList.remove('open');
-
-  var pk = document.getElementById('projectPicker');
-  if (pk && !pk.contains(e.target)) document.getElementById('projectMenu').classList.remove('open');
+  if (np && np.classList.contains('open') && !np.contains(e.target) && nb && !nb.contains(e.target)) np.classList.remove('open');
 
   var ub = document.getElementById('userBtn');
   var um = document.getElementById('userMenu');
-  if (um && um.classList.contains('open') && !um.contains(e.target) && !ub.contains(e.target)) um.classList.remove('open');
+  if (um && um.classList.contains('open') && !um.contains(e.target) && ub && !ub.contains(e.target)) um.classList.remove('open');
 });

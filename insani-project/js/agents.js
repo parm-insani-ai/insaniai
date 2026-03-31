@@ -37,19 +37,21 @@ async function apiRunBidAnalysis(docIds, projectId) {
 
 function showMaterialModal() {
   if (!activeProjectId) { showToast('Create a project first'); return; }
-  if (!projectDocuments.length) { showToast('Upload documents first — specs, drawings, or material lists'); return; }
+
+  var docsHtml = projectDocuments.length ?
+    projectDocuments.map(function(d) {
+      return '<label class="agent-doc-check"><input type="checkbox" value="' + d.id + '"><span class="agent-doc-name">' + esc(d.filename) + '</span><span class="agent-doc-meta">' + d.page_count + ' pages</span></label>';
+    }).join('') :
+    '<div style="color:var(--text-dim);font-size:0.78rem;padding:0.5rem">No documents yet</div>';
 
   var html = '<div class="agent-modal-inner">' +
     '<div class="agent-modal-header">' +
     '<h3>Material Price Analysis</h3>' +
     '<button class="dv-close" onclick="closeAgentModal()">&#10005;</button>' +
     '</div>' +
-    '<p class="agent-modal-desc">Select which documents contain material information. The agent will extract materials, find pricing from Halifax suppliers, and recommend cost savings.</p>' +
-    '<div class="agent-doc-list" id="materialDocCheckboxes">' +
-    projectDocuments.map(function(d) {
-      return '<label class="agent-doc-check"><input type="checkbox" value="' + d.id + '"><span class="agent-doc-name">' + esc(d.filename) + '</span><span class="agent-doc-meta">' + d.page_count + ' pages</span></label>';
-    }).join('') +
-    '</div>' +
+    '<p class="agent-modal-desc">Select documents or upload new ones. The agent will extract materials, find pricing from Halifax suppliers, and recommend cost savings.</p>' +
+    '<div class="agent-upload-inline"><label class="disc-btn disc-btn-cancel" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem">+ Upload file<input type="file" accept=".pdf" onchange="agentInlineUpload(this,\'materialDocCheckboxes\')" style="display:none"></label></div>' +
+    '<div class="agent-doc-list" id="materialDocCheckboxes">' + docsHtml + '</div>' +
     '<div class="agent-select-actions">' +
     '<button class="agent-select-btn" onclick="toggleAllChecks(\'materialDocCheckboxes\', true)">Select all</button>' +
     '<button class="agent-select-btn" onclick="toggleAllChecks(\'materialDocCheckboxes\', false)">Deselect all</button>' +
@@ -65,6 +67,52 @@ function showMaterialModal() {
 
 function closeAgentModal() {
   document.getElementById('agentModal').classList.remove('open');
+}
+
+async function agentInlineUpload(inputEl, checkboxContainerId) {
+  var file = inputEl.files[0];
+  if (!file) return;
+  inputEl.value = '';
+
+  if (!activeProjectId) { showToast('No project selected'); return; }
+  if (file.size > 50 * 1024 * 1024) { showToast('File too large — max 50MB'); return; }
+
+  showToast('Uploading ' + file.name + '...');
+
+  var formData = new FormData();
+  formData.append('file', file);
+  formData.append('project_id', activeProjectId);
+
+  try {
+    var res = await fetch(API_BASE + '/v1/documents/upload', {
+      method: 'POST',
+      headers: accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {},
+      body: formData
+    });
+
+    if (!res.ok) throw new Error('Upload failed');
+    var doc = await res.json();
+
+    // Reload project documents
+    await loadProjectDocuments();
+
+    // Add the new doc to the checkbox list as checked
+    var container = document.getElementById(checkboxContainerId);
+    if (container) {
+      // Remove "No documents" placeholder
+      var placeholder = container.querySelector('div[style]');
+      if (placeholder) placeholder.remove();
+
+      var label = document.createElement('label');
+      label.className = 'agent-doc-check';
+      label.innerHTML = '<input type="checkbox" value="' + doc.id + '" checked><span class="agent-doc-name">' + esc(doc.filename) + '</span><span class="agent-doc-meta">' + doc.page_count + ' pages</span>';
+      container.appendChild(label);
+    }
+
+    showToast(file.name + ' uploaded');
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+  }
 }
 
 function toggleAllChecks(containerId, checked) {
@@ -187,19 +235,21 @@ function renderMaterialResults(result) {
 
 function showBidModal() {
   if (!activeProjectId) { showToast('Create a project first'); return; }
-  if (!projectDocuments.length) { showToast('Upload ITB/RFP documents first'); return; }
+
+  var bidDocsHtml = projectDocuments.length ?
+    projectDocuments.map(function(d) {
+      return '<label class="agent-doc-check"><input type="checkbox" value="' + d.id + '"><span class="agent-doc-name">' + esc(d.filename) + '</span><span class="agent-doc-meta">' + d.page_count + ' pages</span></label>';
+    }).join('') :
+    '<div style="color:var(--text-dim);font-size:0.78rem;padding:0.5rem">No documents yet</div>';
 
   var html = '<div class="agent-modal-inner">' +
     '<div class="agent-modal-header">' +
     '<h3>Bid Estimating Assistant</h3>' +
     '<button class="dv-close" onclick="closeAgentModal()">&#10005;</button>' +
     '</div>' +
-    '<p class="agent-modal-desc">Select your ITB/RFP documents. The agent will extract scope, estimate costs with Halifax rates, check NS Building Code compliance, and generate a bid proposal.</p>' +
-    '<div class="agent-doc-list" id="bidDocCheckboxes">' +
-    projectDocuments.map(function(d) {
-      return '<label class="agent-doc-check"><input type="checkbox" value="' + d.id + '"><span class="agent-doc-name">' + esc(d.filename) + '</span><span class="agent-doc-meta">' + d.page_count + ' pages</span></label>';
-    }).join('') +
-    '</div>' +
+    '<p class="agent-modal-desc">Upload your ITB/RFP documents or select existing ones. The agent will extract scope, estimate costs with Halifax rates, check NS Building Code compliance, and generate a bid proposal.</p>' +
+    '<div class="agent-upload-inline"><label class="disc-btn disc-btn-cancel" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem">+ Upload file<input type="file" accept=".pdf" onchange="agentInlineUpload(this,\'bidDocCheckboxes\')" style="display:none"></label></div>' +
+    '<div class="agent-doc-list" id="bidDocCheckboxes">' + bidDocsHtml + '</div>' +
     '<div class="agent-select-actions">' +
     '<button class="agent-select-btn" onclick="toggleAllChecks(\'bidDocCheckboxes\', true)">Select all</button>' +
     '<button class="agent-select-btn" onclick="toggleAllChecks(\'bidDocCheckboxes\', false)">Deselect all</button>' +

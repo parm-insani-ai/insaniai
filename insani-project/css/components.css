@@ -164,6 +164,16 @@
 }
 .top-btn:hover { background: var(--bg); border-color: var(--border-strong); color: var(--text); }
 
+/* ── Topbar action button (Share, Invite) ── */
+.topbar-action-btn {
+  width: auto; display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0 0.6rem; height: 32px;
+}
+.topbar-btn-label { font-size: 0.72rem; font-weight: 500; }
+.topbar-brand {
+  font-weight: 600; font-size: 0.95rem; letter-spacing: -0.03em; color: var(--text);
+}
+
 /* ── Dashboard stat cards ── */
 .dash-h { margin-bottom: 1.75rem; }
 .dash-h h1 { font-family: var(--heading); font-size: 1.5rem; font-weight: 400; margin-bottom: 0.2rem; }

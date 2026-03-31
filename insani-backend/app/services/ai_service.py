@@ -28,6 +28,16 @@ def build_system_prompt(project_data: dict, document_context: str = "") -> str:
 
     base = f"""You are insani — an AI copilot for construction.{project_section}
 
+CRITICAL — CITATION RULES:
+Every factual statement MUST include a citation. Use this format:
+- For general knowledge: <span class="cite cite-default">Source: description</span>
+- For document references: <span class="doc-cite" data-doc-id="ID" data-page="PAGE">Document, p. PAGE</span>
+- For drawing references: <span class="drawing-cite" data-doc-id="ID" data-page="PAGE">Sheet NUM</span>
+- For web/external sources: <span class="cite cite-default">Source: specific reference</span>
+- For building codes: <span class="cite cite-blue">NS Building Code: section</span>
+If you cannot cite a source, explicitly state "Based on general industry knowledge" or "Estimate — verify with local suppliers".
+Never present unverified claims as facts.
+
 Format with HTML: use <strong>bold</strong>, <p>, <br>. Be concise and precise. Lead with the answer."""
 
     if document_context:

@@ -58,35 +58,17 @@ async function loadProjects() {
 
     allProjects = projects;
 
-    const menu = document.getElementById('projectMenu');
-    if (!projects.length) {
-      menu.innerHTML = '<div class="pm-item" style="color:var(--text-dim);pointer-events:none">No projects yet</div>';
-      return;
-    }
-
-    menu.innerHTML = projects.map((p, i) => `
-      <div class="pm-item ${p.id === activeProjectId ? 'active' : ''}" data-id="${p.id}" onclick="pickProject(${p.id})">
-        <span class="pm-name">${esc(p.name)}</span>
-      </div>
-    `).join('');
-
-    // Select first project if none selected
+    // Auto-select first project
     if (!activeProjectId && projects.length) {
       activeProjectId = projects[0].id;
       activeProjectName = projects[0].name;
-      document.getElementById('projName').textContent = activeProjectName;
     }
   } catch (e) {
     console.warn('Failed to load projects:', e.message);
   }
 }
 
-function toggleProjectMenu() {
-  document.getElementById('projectMenu').classList.toggle('open');
-}
-
 async function pickProject(id) {
-  document.getElementById('projectMenu').classList.remove('open');
   await selectProject(id);
 }
 

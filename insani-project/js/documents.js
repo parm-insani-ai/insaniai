@@ -66,8 +66,8 @@ function renderDocumentList() {
   var container = document.getElementById('docList');
   if (!container) return;
 
-  // Filter out drawing/blueprint documents — those show under Blueprints
-  var docs = projectDocuments.filter(function(d) { return d.doc_type !== 'drawing'; });
+  // Show ALL documents in the All Documents section
+  var docs = projectDocuments;
 
   if (!docs.length) {
     container.innerHTML = '<div style="color:var(--text-dim);font-size:0.75rem;padding:0.3rem 0.6rem">No documents uploaded</div>';
