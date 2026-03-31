@@ -1,14 +1,17 @@
 /* ═══════════════════════════════════════════════
    DRAWINGS — Blueprint upload, sheet browser,
-   drawing viewer with zoom/nav, and vision Q&A.
+   and drawing viewer with zoom/pan/scroll.
    ═══════════════════════════════════════════════ */
 
-var drawingDocuments = [];   // Drawing docs for current project
-var activeDrawingDoc = null;  // Currently viewed drawing
-var drawingSheets = [];       // Sheets for active drawing
+var drawingDocuments = [];
+var activeDrawingDoc = null;
+var drawingSheets = [];
 var drawingCurrentPage = 1;
 var drawingTotalPages = 1;
 var drawingZoom = 1;
+var MIN_ZOOM = 0.25;
+var MAX_ZOOM = 5;
+var ZOOM_STEP = 0.25;
 
 // ═══ API ═══
 
@@ -71,7 +74,6 @@ async function uploadDrawing(inputEl) {
     showToast(file.name + ' uploaded — ' + result.page_count + ' sheets indexed');
     await loadDrawingDocuments();
 
-    // Auto-open the viewer
     if (result.id) {
       await openDrawingDoc(result.id);
     }
@@ -87,7 +89,6 @@ async function loadDrawingDocuments() {
 
   try {
     var allDocs = await apiFetch('/v1/documents?project_id=' + activeProjectId);
-    // Also check drawing-specific docs by trying sheets endpoint
     drawingDocuments = [];
     for (var i = 0; i < allDocs.length; i++) {
       try {
@@ -147,8 +148,9 @@ async function openDrawingDoc(docId) {
     activeDrawingDoc = docId;
     drawingCurrentPage = 1;
     drawingTotalPages = drawingSheets.length;
+    drawingZoom = 1;
 
-    renderDrawingViewer();
+    renderSheetThumbs();
     loadDrawingPage(1);
 
     document.getElementById('drawingViewerOverlay').classList.add('open');
@@ -157,102 +159,135 @@ async function openDrawingDoc(docId) {
   }
 }
 
-function renderDrawingViewer() {
-  var sheetsHtml = drawingSheets.map(function(s, i) {
+function renderSheetThumbs() {
+  var html = drawingSheets.map(function(s, i) {
     var label = s.sheet_number || ('P' + s.page_number);
     var title = s.sheet_title || ('Page ' + s.page_number);
-    var discClass = s.discipline ? ' disc-' + s.discipline : '';
-    return '<div class="drawing-sheet-thumb' + discClass + (i === 0 ? ' active' : '') + '" ' +
+    return '<button class="dv-sheet' + (i === 0 ? ' active' : '') + '" ' +
       'onclick="loadDrawingPage(' + s.page_number + ')" ' +
       'title="' + esc(label + ' — ' + title) + '">' +
-      '<span class="sheet-label">' + esc(label) + '</span>' +
-      '<span class="sheet-title">' + esc(title) + '</span>' +
-    '</div>';
+      '<span class="dv-sheet-num">' + esc(label) + '</span>' +
+      '<span class="dv-sheet-title">' + esc(title) + '</span>' +
+    '</button>';
   }).join('');
 
-  document.getElementById('drawingSheets').innerHTML = sheetsHtml;
-  updateDrawingPageLabel();
+  document.getElementById('dvSheets').innerHTML = html;
 }
 
 function loadDrawingPage(pageNum) {
   drawingCurrentPage = pageNum;
   drawingZoom = 1;
 
-  var img = document.getElementById('drawingImage');
+  var img = document.getElementById('dvImage');
+  var container = document.getElementById('dvScrollArea');
+
+  // Show loading state
+  img.style.display = 'none';
+  img.onload = function() {
+    img.style.display = 'block';
+    applyZoom();
+    // Scroll to top-left on page load
+    container.scrollTop = 0;
+    container.scrollLeft = 0;
+  };
+  img.onerror = function() {
+    img.style.display = 'none';
+    showToast('Failed to load page image');
+  };
   img.src = API_BASE + '/v1/drawings/' + activeDrawingDoc + '/page/' + pageNum + '/image';
-  img.style.transform = 'scale(1)';
 
   // Update active sheet thumb
-  var thumbs = document.querySelectorAll('.drawing-sheet-thumb');
+  var thumbs = document.querySelectorAll('.dv-sheet');
   thumbs.forEach(function(t, i) {
     t.classList.toggle('active', (i + 1) === pageNum);
   });
 
-  // Clear highlights
-  document.getElementById('drawingHighlights').innerHTML = '';
-
-  updateDrawingPageLabel();
+  updatePageInfo();
 }
 
-function updateDrawingPageLabel() {
+function updatePageInfo() {
   var sheet = drawingSheets[drawingCurrentPage - 1];
-  var label = 'Sheet ' + drawingCurrentPage + ' of ' + drawingTotalPages;
+  var pageLabel = drawingCurrentPage + ' / ' + drawingTotalPages;
   if (sheet && sheet.sheet_number) {
-    label = sheet.sheet_number + ' — ' + drawingCurrentPage + '/' + drawingTotalPages;
+    pageLabel = sheet.sheet_number + '  (' + drawingCurrentPage + '/' + drawingTotalPages + ')';
   }
-  document.getElementById('drawingPageLabel').textContent = label;
+  document.getElementById('dvPageInfo').textContent = pageLabel;
 
-  // Update title
-  if (sheet) {
-    document.getElementById('drawingViewerTitle').textContent = sheet.sheet_title || 'Drawing';
-  }
+  var title = 'Drawing';
+  if (sheet) title = sheet.sheet_title || 'Page ' + drawingCurrentPage;
+  document.getElementById('dvTitle').textContent = title;
+
+  document.getElementById('dvZoomLevel').textContent = Math.round(drawingZoom * 100) + '%';
 }
 
-function drawingPrevPage() {
+// ── Zoom ──
+
+function applyZoom() {
+  var img = document.getElementById('dvImage');
+  img.style.width = (drawingZoom * 100) + '%';
+  img.style.height = 'auto';
+  document.getElementById('dvZoomLevel').textContent = Math.round(drawingZoom * 100) + '%';
+}
+
+function dvZoomIn() {
+  drawingZoom = Math.min(drawingZoom + ZOOM_STEP, MAX_ZOOM);
+  applyZoom();
+}
+
+function dvZoomOut() {
+  drawingZoom = Math.max(drawingZoom - ZOOM_STEP, MIN_ZOOM);
+  applyZoom();
+}
+
+function dvZoomFit() {
+  drawingZoom = 1;
+  applyZoom();
+  var container = document.getElementById('dvScrollArea');
+  container.scrollTop = 0;
+  container.scrollLeft = 0;
+}
+
+// Mouse wheel zoom
+function dvWheelZoom(e) {
+  if (!e.ctrlKey) return; // Only zoom with Ctrl+scroll
+  e.preventDefault();
+
+  var delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+  drawingZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, drawingZoom + delta));
+  applyZoom();
+}
+
+// ── Navigation ──
+
+function dvPrevPage() {
   if (drawingCurrentPage > 1) loadDrawingPage(drawingCurrentPage - 1);
 }
 
-function drawingNextPage() {
+function dvNextPage() {
   if (drawingCurrentPage < drawingTotalPages) loadDrawingPage(drawingCurrentPage + 1);
-}
-
-function drawingZoomIn() {
-  drawingZoom = Math.min(drawingZoom + 0.25, 4);
-  document.getElementById('drawingImage').style.transform = 'scale(' + drawingZoom + ')';
-}
-
-function drawingZoomOut() {
-  drawingZoom = Math.max(drawingZoom - 0.25, 0.25);
-  document.getElementById('drawingImage').style.transform = 'scale(' + drawingZoom + ')';
-}
-
-function drawingZoomFit() {
-  drawingZoom = 1;
-  document.getElementById('drawingImage').style.transform = 'scale(1)';
 }
 
 function closeDrawingViewer() {
   document.getElementById('drawingViewerOverlay').classList.remove('open');
 }
 
-// ═══ DRAWING CITATION CLICK HANDLER ═══
+// ═══ EVENT LISTENERS ═══
 
+// Drawing citation click handler
 document.addEventListener('click', function(e) {
   var cite = e.target.closest('.drawing-cite');
   if (!cite) return;
 
   var docId = parseInt(cite.getAttribute('data-doc-id'));
   var page = parseInt(cite.getAttribute('data-page')) || 1;
-
   if (!docId) return;
 
-  // Open the drawing viewer at the cited page
   (async function() {
     try {
       drawingSheets = await apiGetSheets(docId);
       activeDrawingDoc = docId;
       drawingTotalPages = drawingSheets.length;
-      renderDrawingViewer();
+      renderSheetThumbs();
       loadDrawingPage(page);
       document.getElementById('drawingViewerOverlay').classList.add('open');
     } catch (err) {
@@ -261,7 +296,7 @@ document.addEventListener('click', function(e) {
   })();
 });
 
-// Close drawing viewer on Escape
+// Close on Escape
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     var overlay = document.getElementById('drawingViewerOverlay');
@@ -276,5 +311,13 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('click', function(e) {
   if (e.target === document.getElementById('drawingViewerOverlay')) {
     closeDrawingViewer();
+  }
+});
+
+// Attach wheel zoom after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  var scrollArea = document.getElementById('dvScrollArea');
+  if (scrollArea) {
+    scrollArea.addEventListener('wheel', dvWheelZoom, { passive: false });
   }
 });

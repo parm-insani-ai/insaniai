@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>insani — Construction AI Copilot</title>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tokens.css?v=8">
-  <link rel="stylesheet" href="css/layout.css?v=8">
-  <link rel="stylesheet" href="css/components.css?v=8">
-  <link rel="stylesheet" href="css/chat.css?v=8">
-  <link rel="stylesheet" href="css/panels.css?v=8">
-  <link rel="stylesheet" href="css/dashboard.css?v=8">
-  <link rel="stylesheet" href="css/responsive.css?v=8">
+  <link rel="stylesheet" href="css/tokens.css?v=9">
+  <link rel="stylesheet" href="css/layout.css?v=9">
+  <link rel="stylesheet" href="css/components.css?v=9">
+  <link rel="stylesheet" href="css/chat.css?v=9">
+  <link rel="stylesheet" href="css/panels.css?v=9">
+  <link rel="stylesheet" href="css/dashboard.css?v=9">
+  <link rel="stylesheet" href="css/responsive.css?v=9">
 </head>
 <body>
 
@@ -73,31 +73,32 @@
   </div>
 </div>
 
-<!-- Drawing Viewer panel (for blueprints — image-based with zoom/nav) -->
+<!-- Drawing Viewer (blueprint viewer with zoom/pan/scroll) -->
 <div class="drawing-viewer-overlay" id="drawingViewerOverlay">
-  <div class="drawing-viewer-panel">
-    <div class="drawing-viewer-header">
-      <div class="drawing-viewer-title" id="drawingViewerTitle">Drawing</div>
-      <div class="drawing-viewer-nav">
-        <button onclick="drawingPrevPage()" title="Previous sheet">&#9664;</button>
-        <span id="drawingPageLabel">Sheet 1 of 1</span>
-        <button onclick="drawingNextPage()" title="Next sheet">&#9654;</button>
+  <div class="dv-panel">
+    <!-- Header: title, nav, zoom, close -->
+    <div class="dv-header">
+      <div class="dv-title" id="dvTitle">Drawing</div>
+      <div class="dv-nav">
+        <button onclick="dvPrevPage()" title="Previous sheet">&#9664;</button>
+        <span class="dv-page-info" id="dvPageInfo">1 / 1</span>
+        <button onclick="dvNextPage()" title="Next sheet">&#9654;</button>
       </div>
-      <div class="drawing-viewer-zoom">
-        <button onclick="drawingZoomOut()" title="Zoom out">−</button>
-        <button onclick="drawingZoomFit()" title="Fit to view">Fit</button>
-        <button onclick="drawingZoomIn()" title="Zoom in">+</button>
+      <div class="dv-zoom-controls">
+        <button onclick="dvZoomOut()" title="Zoom out">&#8722;</button>
+        <span class="dv-zoom-level" id="dvZoomLevel">100%</span>
+        <button onclick="dvZoomIn()" title="Zoom in">+</button>
+        <button onclick="dvZoomFit()" title="Fit to view" class="dv-fit-btn">Fit</button>
       </div>
-      <button class="drawing-viewer-close" onclick="closeDrawingViewer()">×</button>
+      <button class="dv-close" onclick="closeDrawingViewer()" title="Close">&#10005;</button>
     </div>
-    <div class="drawing-viewer-body" id="drawingViewerBody">
-      <div class="drawing-canvas" id="drawingCanvas">
-        <img id="drawingImage" src="" alt="Drawing sheet">
-        <div class="drawing-highlights" id="drawingHighlights"></div>
-      </div>
+    <!-- Scrollable drawing area -->
+    <div class="dv-scroll-area" id="dvScrollArea">
+      <img id="dvImage" src="" alt="Blueprint page" draggable="false">
     </div>
-    <div class="drawing-viewer-footer">
-      <div class="drawing-sheets" id="drawingSheets"></div>
+    <!-- Sheet thumbs footer -->
+    <div class="dv-footer">
+      <div class="dv-sheets" id="dvSheets"></div>
     </div>
   </div>
 </div>
@@ -240,15 +241,15 @@
 </div>
 
 <!-- Scripts -->
-<script src="js/data.js?v=8"></script>
-<script src="js/api.js?v=8"></script>
-<script src="js/chat.js?v=8"></script>
-<script src="js/files.js?v=8"></script>
-<script src="js/panels.js?v=8"></script>
-<script src="js/documents.js?v=8"></script>
-<script src="js/drawings.js?v=8"></script>
-<script src="js/integrations.js?v=8"></script>
-<script src="js/nav.js?v=8"></script>
-<script src="js/main.js?v=8"></script>
+<script src="js/data.js?v=9"></script>
+<script src="js/api.js?v=9"></script>
+<script src="js/chat.js?v=9"></script>
+<script src="js/files.js?v=9"></script>
+<script src="js/panels.js?v=9"></script>
+<script src="js/documents.js?v=9"></script>
+<script src="js/drawings.js?v=9"></script>
+<script src="js/integrations.js?v=9"></script>
+<script src="js/nav.js?v=9"></script>
+<script src="js/main.js?v=9"></script>
 </body>
 </html>
