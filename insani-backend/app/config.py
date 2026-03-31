@@ -18,7 +18,8 @@ class Settings:
 
     # Anthropic
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    ANTHROPIC_MODEL_FAST: str = "claude-haiku-4-5-20251001"    # Fast: general chat (~1-2s)
+    ANTHROPIC_MODEL_SMART: str = "claude-sonnet-4-6"           # Accurate: drawings, documents (~3-5s)
     ANTHROPIC_MAX_TOKENS: int = 1024
 
     # Auth

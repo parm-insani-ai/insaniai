@@ -21,21 +21,14 @@ def build_system_prompt(project_data: dict, document_context: str = "") -> str:
     """Build system prompt with project data and optional document content."""
     from app.services.document_service import build_citation_prompt_addition
 
-    base = f"""You are insani — an AI copilot for construction. You connect siloed data from Procore, Autodesk, Sage, Primavera, email, and drawings into one conversation.
+    # Only include project data if it has content
+    project_section = ""
+    if project_data and len(json.dumps(project_data)) > 5:
+        project_section = f"\nPROJECT DATA:\n{json.dumps(project_data, indent=2)[:3000]}"
 
-PROJECT DATA:
-{json.dumps(project_data, indent=2)}
+    base = f"""You are insani — an AI copilot for construction.{project_section}
 
-DATE: March 15, 2026
-
-FORMAT YOUR RESPONSES WITH HTML:
-- Citations: <span class="cite cite-default">Source</span> or <span class="cite cite-blue">Autodesk</span> or <span class="cite cite-orange">Budget source</span>
-- Risks: <div class="risk-box"><span class="risk-icon">⚠</span><span>CONTENT</span></div>
-- Actions: <div class="action-box"><span>✓</span><span>CONTENT</span></div>
-- Use <strong>bold</strong> for IDs, values, dates. Use <p> and <br> for structure.
-- Reference actual IDs, dates, people, amounts from the data.
-- Be precise, data-driven, actionable. Lead with the answer.
-- Do NOT include any JSON blocks."""
+Format with HTML: use <strong>bold</strong>, <p>, <br>. Be concise and precise. Lead with the answer."""
 
     if document_context:
         # Check if the context contains synced integration data (emails, invoices)
@@ -91,6 +84,16 @@ ADDITIONAL CONTEXT:
 {build_email_citation_prompt()}"""
 
     return base
+
+
+def pick_model(drawing_images: list[dict] | None = None, document_context: str = "") -> str:
+    """Pick the right model based on query complexity.
+    Haiku for fast general chat, Sonnet for drawings/documents."""
+    if drawing_images:
+        return settings.ANTHROPIC_MODEL_SMART
+    if document_context and ("DIRECTLY EXTRACTED" in document_context or "DRAWING INDEX" in document_context or "=== DOCUMENT:" in document_context):
+        return settings.ANTHROPIC_MODEL_SMART
+    return settings.ANTHROPIC_MODEL_FAST
 
 
 async def ask_claude(
@@ -149,10 +152,13 @@ async def ask_claude(
 
     messages = conversation_history + [{"role": "user", "content": user_content}]
 
+    selected_model = pick_model(drawing_images, document_context)
+    logger.info("model_selected", model=selected_model, has_drawings=bool(drawing_images), has_docs=bool(document_context))
+
     try:
         # Async call — doesn't block the event loop
         response = await client.messages.create(
-            model=settings.ANTHROPIC_MODEL,
+            model=selected_model,
             max_tokens=2048 if drawing_images else settings.ANTHROPIC_MAX_TOKENS,
             system=build_system_prompt(project_data, document_context),
             messages=messages
@@ -324,9 +330,11 @@ async def stream_claude(
 
     messages = conversation_history + [{"role": "user", "content": user_content}]
 
+    selected_model = pick_model(drawing_images, document_context)
+
     try:
         async with client.messages.stream(
-            model=settings.ANTHROPIC_MODEL,
+            model=selected_model,
             max_tokens=2048 if drawing_images else settings.ANTHROPIC_MAX_TOKENS,
             system=build_system_prompt(project_data, document_context),
             messages=messages,

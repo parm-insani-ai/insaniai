@@ -222,7 +222,7 @@ async def extract_title_block(
 
     try:
         response = await _vision_client.messages.create(
-            model=settings.ANTHROPIC_MODEL,
+            model=settings.ANTHROPIC_MODEL_SMART,
             max_tokens=1024,
             messages=[{
                 "role": "user",
@@ -618,7 +618,7 @@ async def ask_about_drawings(
 
     try:
         response = await _vision_client.messages.create(
-            model=settings.ANTHROPIC_MODEL,
+            model=settings.ANTHROPIC_MODEL_SMART,
             max_tokens=2048,
             system=system,
             messages=messages,
