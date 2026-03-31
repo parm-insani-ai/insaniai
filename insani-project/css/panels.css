@@ -267,6 +267,30 @@
   width: 100%; height: 100%; border: none;
 }
 
+/* ═══ AGENT SIDEBAR BUTTONS ═══ */
+
+.agent-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  width: 100%; padding: 0.5rem 0.6rem;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-chat); cursor: pointer;
+  font-family: var(--body); font-size: 0.78rem;
+  color: var(--text-secondary); transition: all 0.15s;
+  margin-bottom: 0.25rem; text-align: left;
+}
+.agent-btn:hover {
+  background: var(--surface); border-color: var(--border-strong); color: var(--text);
+}
+.agent-btn-icon {
+  width: 24px; height: 24px; min-width: 24px;
+  border-radius: 6px; display: grid; place-items: center;
+  font-weight: 700; font-size: 0.7rem; color: #fff;
+}
+.agent-btn-text { font-weight: 500; }
+.agent-btn-compare .agent-btn-icon { background: var(--blue); font-size: 0.85rem; }
+.agent-btn-material .agent-btn-icon { background: var(--green); }
+.agent-btn-bid .agent-btn-icon { background: var(--orange); }
+
 /* ═══ DISCREPANCY DETECTOR UI ═══ */
 
 .disc-report {

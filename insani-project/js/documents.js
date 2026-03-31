@@ -66,12 +66,15 @@ function renderDocumentList() {
   var container = document.getElementById('docList');
   if (!container) return;
 
-  if (!projectDocuments.length) {
+  // Filter out drawing/blueprint documents — those show under Blueprints
+  var docs = projectDocuments.filter(function(d) { return d.doc_type !== 'drawing'; });
+
+  if (!docs.length) {
     container.innerHTML = '<div style="color:var(--text-dim);font-size:0.75rem;padding:0.3rem 0.6rem">No documents uploaded</div>';
     return;
   }
 
-  container.innerHTML = projectDocuments.map(function(d) {
+  container.innerHTML = docs.map(function(d) {
     return '<div class="doc-item" onclick="openDocViewer(' + d.id + ', \'' + esc(d.filename).replace(/'/g, "\\'") + '\', 1)">' +
       '<span class="doc-item-icon">PDF</span>' +
       '<span class="doc-item-name">' + esc(d.filename) + '</span>' +

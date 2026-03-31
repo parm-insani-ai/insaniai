@@ -120,6 +120,7 @@ async function selectProject(id) {
   await loadProjectDocuments();
   await loadDrawingDocuments();
   await loadDiscrepancyReports();
+  await loadAgentHistory();
 }
 
 // ── Dashboard (dynamic from project data) ──

@@ -3,7 +3,21 @@
    Multi-step AI agents for construction intelligence.
    ═══════════════════════════════════════════════ */
 
+var agentHistory = [];
+
 // ═══ API ═══
+
+async function apiGetAgentHistory(projectId) {
+  return apiFetch('/v1/agents/history?project_id=' + projectId);
+}
+
+async function apiGetAgentRun(runId) {
+  return apiFetch('/v1/agents/history/' + runId);
+}
+
+async function apiDeleteAgentRun(runId) {
+  return apiFetch('/v1/agents/history/' + runId, { method: 'DELETE' });
+}
 
 async function apiRunMaterialAnalysis(docIds, projectId) {
   return apiFetch('/v1/agents/materials', {
@@ -75,6 +89,7 @@ async function runMaterialAnalysis() {
   try {
     var result = await apiRunMaterialAnalysis(docIds, activeProjectId);
     renderMaterialResults(result);
+    await loadAgentHistory();
   } catch (e) {
     document.getElementById('agentView').innerHTML = '<div class="disc-report"><div class="disc-report-header"><button class="disc-back" onclick="showChat()">← Back to chat</button><h2>Material Price Analysis</h2></div><div class="disc-summary" style="color:var(--red)">Analysis failed: ' + esc(e.message) + '<br><br>Make sure your .env file has the ANTHROPIC_API_KEY set.</div></div>';
   }
@@ -213,6 +228,7 @@ async function runBidAnalysis() {
   try {
     var result = await apiRunBidAnalysis(docIds, activeProjectId);
     renderBidResults(result);
+    await loadAgentHistory();
   } catch (e) {
     document.getElementById('agentView').innerHTML = '<div class="disc-report"><div class="disc-report-header"><button class="disc-back" onclick="showChat()">← Back to chat</button><h2>Bid Proposal</h2></div><div class="disc-summary" style="color:var(--red)">Bid analysis failed: ' + esc(e.message) + '<br><br>Make sure your .env file has the ANTHROPIC_API_KEY set.</div></div>';
   }
@@ -372,4 +388,62 @@ function showAgentView() {
 function formatNum(n) {
   if (!n && n !== 0) return '-';
   return Number(n).toLocaleString('en-CA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+// ═══ AGENT HISTORY ═══
+
+async function loadAgentHistory() {
+  if (!activeProjectId) return;
+  try {
+    agentHistory = await apiGetAgentHistory(activeProjectId);
+    renderAgentHistory();
+  } catch (e) {
+    agentHistory = [];
+    renderAgentHistory();
+  }
+}
+
+function renderAgentHistory() {
+  var container = document.getElementById('agentHistoryList');
+  if (!container) return;
+
+  if (!agentHistory.length) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:0.72rem;padding:0.2rem 0.4rem">No previous runs</div>';
+    return;
+  }
+
+  container.innerHTML = agentHistory.map(function(r) {
+    var icon = r.agent_type === 'materials' ? 'MT' : 'BID';
+    var color = r.status === 'complete' ? 'var(--green)' : 'var(--red)';
+    return '<div class="doc-item" onclick="viewAgentRun(' + r.id + ',\'' + r.agent_type + '\')">' +
+      '<span class="doc-item-icon" style="color:' + color + '">' + icon + '</span>' +
+      '<span class="doc-item-name" style="font-size:0.72rem">' + esc(r.title) + '</span>' +
+      '<button class="sb-delete" onclick="event.stopPropagation();deleteAgentRun(' + r.id + ')" title="Delete">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+async function viewAgentRun(runId, agentType) {
+  try {
+    showAgentView();
+    document.getElementById('agentView').innerHTML = '<div class="agent-loading"><div class="agent-loading-spin"></div><div>Loading report...</div></div>';
+    var result = await apiGetAgentRun(runId);
+    if (agentType === 'materials') {
+      renderMaterialResults(result);
+    } else {
+      renderBidResults(result);
+    }
+  } catch (e) {
+    showToast('Failed to load report: ' + e.message);
+  }
+}
+
+async function deleteAgentRun(runId) {
+  try {
+    await apiDeleteAgentRun(runId);
+    await loadAgentHistory();
+    showToast('Report deleted');
+  } catch (e) {
+    showToast('Failed to delete');
+  }
 }

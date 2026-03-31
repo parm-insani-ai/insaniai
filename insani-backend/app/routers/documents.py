@@ -37,6 +37,7 @@ class DocumentResponse(BaseModel):
     file_size: int
     page_count: int
     status: str
+    doc_type: str = "general"
     created_at: str | None = None
 
 
@@ -119,6 +120,7 @@ async def list_documents(
         DocumentResponse(
             id=d.id, filename=d.filename, media_type=d.media_type,
             file_size=d.file_size, page_count=d.page_count, status=d.status,
+            doc_type=getattr(d, 'doc_type', 'general') or 'general',
             created_at=str(d.created_at) if d.created_at else None,
         )
         for d in docs

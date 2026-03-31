@@ -167,6 +167,7 @@ async function initApp() {
   await loadProjectDocuments();
   await loadDrawingDocuments();
   await loadDiscrepancyReports();
+  await loadAgentHistory();
 
   // Check for OAuth callback and load integration status
   checkIntegrationCallback();

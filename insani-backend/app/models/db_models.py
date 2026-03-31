@@ -331,6 +331,30 @@ class DrawingRegion(Base):
 
 
 # ═══════════════════════════════════════════════
+# AGENT RUNS — History of material/bid agent executions
+# ═══════════════════════════════════════════════
+
+class AgentRun(Base):
+    """Stores the result of an agent run for history."""
+    __tablename__ = "agent_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    agent_type = Column(String(50), nullable=False)       # materials, bid
+    title = Column(String(500), default="")
+    status = Column(String(50), default="complete")       # complete, error
+    result_json = Column(JSON, default=dict)               # Full result data
+    created_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_agent_run_project", "project_id"),
+        Index("idx_agent_run_org", "org_id"),
+    )
+
+
+# ═══════════════════════════════════════════════
 # DISCREPANCY DETECTION — Spec vs Submittal comparison
 # ═══════════════════════════════════════════════
 
