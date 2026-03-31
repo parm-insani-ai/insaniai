@@ -331,6 +331,70 @@ class DrawingRegion(Base):
 
 
 # ═══════════════════════════════════════════════
+# DISCREPANCY DETECTION — Spec vs Submittal comparison
+# ═══════════════════════════════════════════════
+
+class DiscrepancyReport(Base):
+    """
+    A comparison run between spec documents and submittal documents.
+    Stores the overall summary and links to individual findings.
+    """
+    __tablename__ = "discrepancy_reports"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(500), default="")
+    status = Column(String(50), default="pending")           # pending, analyzing, complete, error
+    spec_doc_ids = Column(JSON, default=list)                 # [doc_id, doc_id, ...]
+    submittal_doc_ids = Column(JSON, default=list)            # [doc_id, doc_id, ...]
+    summary = Column(Text, default="")                        # AI-generated overall summary
+    discrepancy_count = Column(Integer, default=0)
+    error_message = Column(Text, default="")
+    created_at = Column(DateTime, server_default=func.now())
+
+    items = relationship("DiscrepancyItem", back_populates="report", cascade="all, delete-orphan", order_by="DiscrepancyItem.id")
+
+    __table_args__ = (
+        Index("idx_disc_report_project", "project_id"),
+        Index("idx_disc_report_org", "org_id"),
+    )
+
+
+class DiscrepancyItem(Base):
+    """
+    A single discrepancy found between a spec and a submittal.
+    """
+    __tablename__ = "discrepancy_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_id = Column(Integer, ForeignKey("discrepancy_reports.id", ondelete="CASCADE"), nullable=False)
+    severity = Column(String(20), default="info")             # critical, major, minor, info
+    category = Column(String(100), default="other")           # material_mismatch, dimension_mismatch, missing_item, non_compliant, other
+    title = Column(String(500), nullable=False)
+    description = Column(Text, default="")
+    spec_reference = Column(String(255), default="")          # "Spec Section 03 20 00, p. 12"
+    spec_doc_id = Column(Integer, nullable=True)
+    spec_page = Column(Integer, nullable=True)
+    spec_excerpt = Column(Text, default="")
+    submittal_reference = Column(String(255), default="")
+    submittal_doc_id = Column(Integer, nullable=True)
+    submittal_page = Column(Integer, nullable=True)
+    submittal_excerpt = Column(Text, default="")
+    recommendation = Column(Text, default="")
+    status = Column(String(50), default="open")               # open, acknowledged, resolved, dismissed
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+
+    report = relationship("DiscrepancyReport", back_populates="items")
+
+    __table_args__ = (
+        Index("idx_disc_item_report", "report_id"),
+    )
+
+
+# ═══════════════════════════════════════════════
 # INTEGRATIONS — OAuth connections and synced data
 # ═══════════════════════════════════════════════
 

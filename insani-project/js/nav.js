@@ -17,10 +17,12 @@ function showChat() {
   var cv = document.getElementById('chatView');
   var dv = document.getElementById('dashView');
   var iv = document.getElementById('integrationsView');
+  var dcv = document.getElementById('discrepancyView');
   var ia = document.querySelector('.input-area');
   if (cv) { cv.classList.remove('vh'); cv.style.display = ''; }
   if (dv) dv.classList.add('vh');
   if (iv) { iv.classList.add('vh'); iv.style.display = 'none'; }
+  if (dcv) { dcv.classList.add('vh'); dcv.style.display = 'none'; }
   if (ia) { ia.classList.remove('vh'); ia.style.display = ''; }
 }
 
@@ -112,9 +114,10 @@ async function selectProject(id) {
   // Reset chat
   newChat();
 
-  // Load documents and blueprints for this project
+  // Load documents, blueprints, and discrepancy reports for this project
   await loadProjectDocuments();
   await loadDrawingDocuments();
+  await loadDiscrepancyReports();
 }
 
 // ── Dashboard (dynamic from project data) ──

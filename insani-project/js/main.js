@@ -163,9 +163,10 @@ async function initApp() {
   // Load recent chats
   await loadRecentChats();
 
-  // Load project documents and blueprints
+  // Load project documents, blueprints, and discrepancy reports
   await loadProjectDocuments();
   await loadDrawingDocuments();
+  await loadDiscrepancyReports();
 
   // Check for OAuth callback and load integration status
   checkIntegrationCallback();

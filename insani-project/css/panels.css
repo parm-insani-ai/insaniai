@@ -267,6 +267,151 @@
   width: 100%; height: 100%; border: none;
 }
 
+/* ═══ DISCREPANCY DETECTOR UI ═══ */
+
+.disc-report {
+  max-width: 800px; margin: 0 auto;
+  padding: 1.5rem 1.5rem 3rem;
+}
+.disc-report-header {
+  margin-bottom: 1.2rem;
+}
+.disc-report-header h2 {
+  font-family: var(--heading); font-size: 1.3rem; font-weight: 400;
+  margin: 0.5rem 0 0.3rem; color: var(--text);
+}
+.disc-back {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.3rem 0.7rem; font-size: 0.75rem; color: var(--text-muted);
+  cursor: pointer; font-family: var(--body); transition: all 0.12s;
+}
+.disc-back:hover { border-color: var(--border-strong); color: var(--text); background: var(--surface); }
+
+.disc-status {
+  display: inline-block; font-size: 0.7rem; font-weight: 500;
+  padding: 0.15rem 0.5rem; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.disc-status-complete { background: var(--green-soft); color: var(--green); }
+.disc-status-analyzing { background: rgba(217,119,6,0.1); color: var(--orange); }
+.disc-status-error { background: rgba(220,38,38,0.1); color: var(--red); }
+
+.disc-summary {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.85rem 1rem;
+  font-size: 0.82rem; color: var(--text-secondary);
+  line-height: 1.5; margin-bottom: 1rem;
+}
+
+.disc-stats {
+  display: flex; gap: 0.5rem; margin-bottom: 1.2rem;
+}
+.disc-stat {
+  flex: 1; text-align: center; padding: 0.6rem;
+  border-radius: 8px; border: 1px solid var(--border);
+  font-size: 0.68rem; color: var(--text-muted);
+}
+.disc-stat-num { display: block; font-size: 1.3rem; font-family: var(--heading); font-weight: 400; }
+.disc-stat-critical .disc-stat-num { color: var(--red); }
+.disc-stat-major .disc-stat-num { color: var(--orange); }
+.disc-stat-minor .disc-stat-num { color: var(--blue); }
+.disc-stat-info .disc-stat-num { color: var(--text-dim); }
+
+.disc-items { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.disc-item {
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; transition: all 0.12s;
+  border-left: 3px solid var(--border);
+}
+.disc-item:hover { border-color: var(--border-strong); }
+.disc-sev-critical { border-left-color: var(--red); }
+.disc-sev-major { border-left-color: var(--orange); }
+.disc-sev-minor { border-left-color: var(--blue); }
+.disc-sev-info { border-left-color: var(--text-dim); }
+.disc-item-resolved, .disc-item-dismissed { opacity: 0.5; }
+
+.disc-item-header {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 0.85rem; background: var(--surface);
+  flex-wrap: wrap;
+}
+.disc-sev-badge {
+  font-size: 0.6rem; font-weight: 600; text-transform: uppercase;
+  padding: 0.12rem 0.4rem; border-radius: 3px; letter-spacing: 0.04em;
+}
+.disc-sev-badge.disc-sev-critical { background: rgba(220,38,38,0.1); color: var(--red); }
+.disc-sev-badge.disc-sev-major { background: rgba(217,119,6,0.1); color: var(--orange); }
+.disc-sev-badge.disc-sev-minor { background: rgba(2,132,199,0.1); color: var(--blue); }
+.disc-sev-badge.disc-sev-info { background: var(--surface); color: var(--text-dim); }
+
+.disc-cat { font-size: 0.65rem; color: var(--text-dim); }
+.disc-item-title { font-size: 0.8rem; font-weight: 500; flex: 1; min-width: 0; color: var(--text); }
+.disc-item-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+
+.disc-action-btn {
+  font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 5px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); cursor: pointer; font-family: var(--body);
+  transition: all 0.12s;
+}
+.disc-action-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+.disc-action-dismiss:hover { background: var(--text-dim); color: #fff; border-color: var(--text-dim); }
+
+.disc-item-resolved {
+  font-size: 0.65rem; color: var(--text-dim); font-style: italic;
+}
+
+.disc-item-body {
+  padding: 0.7rem 0.85rem; font-size: 0.78rem; line-height: 1.5;
+  color: var(--text-secondary);
+}
+.disc-item-body p { margin: 0 0 0.5rem; }
+
+.disc-excerpts { display: flex; gap: 0.5rem; margin: 0.5rem 0; flex-wrap: wrap; }
+.disc-excerpt {
+  flex: 1; min-width: 200px; background: rgba(22,163,74,0.04);
+  border: 1px solid rgba(22,163,74,0.12); border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+}
+.disc-excerpt-sub { background: rgba(220,38,38,0.04); border-color: rgba(220,38,38,0.12); }
+.disc-excerpt-label { font-size: 0.65rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.25rem; }
+.disc-excerpt-text { font-size: 0.75rem; color: var(--text); font-style: italic; }
+
+.disc-recommendation {
+  margin-top: 0.5rem; padding: 0.5rem 0.65rem;
+  background: var(--surface); border-radius: 6px;
+  font-size: 0.75rem; color: var(--text-secondary);
+}
+
+/* Compare Modal */
+.disc-modal-content {
+  background: var(--bg-chat); border: 1px solid var(--border-strong);
+  border-radius: 14px; padding: 1.5rem; width: 520px; max-width: 90vw;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+.disc-doc-grid { display: flex; gap: 1rem; }
+.disc-col { flex: 1; }
+.disc-col-label { font-size: 0.72rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.disc-check {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.5rem; border-radius: 6px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.12s;
+}
+.disc-check:hover { background: var(--surface); }
+.disc-check input { accent-color: var(--text); }
+
+.disc-btn {
+  padding: 0.45rem 1rem; border-radius: 7px; font-size: 0.8rem;
+  font-family: var(--body); font-weight: 500; cursor: pointer;
+  transition: all 0.12s; border: none;
+}
+.disc-btn-cancel { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+.disc-btn-cancel:hover { background: var(--surface-hover); color: var(--text); }
+.disc-btn-run { background: var(--text); color: var(--bg); }
+.disc-btn-run:hover { opacity: 0.85; }
+
 /* ── Drawing citations (clickable, opens drawing viewer) ── */
 .drawing-cite {
   display: inline-flex; align-items: center; gap: 0.3rem;
