@@ -63,55 +63,50 @@ async def ask(
 
     project_data = project.data_json or {}
 
-    # -- Load project documents for citation-aware responses --
+    # -- Load context (lightweight — only heavy drawing work if question is about drawings) --
     doc_context = ""
+    drawing_images = []
     project_docs = await document_service.get_project_documents(db, body.project_id, ctx.org_id)
-    ready_docs = [d for d in project_docs if d.status == "ready"]
+
+    msg_lower = body.message.lower()
+    drawing_keywords = ["drawing", "blueprint", "sheet", "plan", "floor", "elevation",
+        "section", "detail", "structural", "electrical", "mechanical", "plumbing",
+        "dimension", "scale", "beam", "column", "wall", "room", "layout",
+        "a-", "s-", "m-", "e-", "p-", "spec", "note"]
+    has_drawing_docs = any(getattr(d, 'doc_type', '') == 'drawing' for d in project_docs)
+    question_about_drawings = has_drawing_docs and any(kw in msg_lower for kw in drawing_keywords)
+
+    # Load regular document context (fast)
+    ready_docs = [d for d in project_docs if d.status == "ready" and getattr(d, 'doc_type', '') != 'drawing']
     if ready_docs:
         loaded_docs = []
-        for d in ready_docs[:10]:
+        for d in ready_docs[:5]:
             full_doc = await document_service.get_document_with_pages(db, d.id, ctx.org_id)
             if full_doc:
                 loaded_docs.append(full_doc)
         doc_context = document_service.build_document_context(loaded_docs)
 
-    # -- Load synced data from integrations (emails, invoices, etc.) --
-    try:
-        from app.integrations.sync_service import get_synced_items_for_project, build_synced_data_context
-        synced_items = await get_synced_items_for_project(db, ctx.org_id, None, limit=100)
-        if synced_items:
-            synced_context = build_synced_data_context(synced_items)
-            if doc_context:
-                doc_context = doc_context + "\n\n" + synced_context
-            else:
-                doc_context = synced_context
-            logger.info("synced_data_injected", items=len(synced_items))
-    except Exception as e:
-        logger.warning("synced_data_load_error", error=str(e))
-
-    # -- Load drawing data for blueprint documents (hybrid: text + optional images) --
-    drawing_images = []
-    try:
-        drawing_docs = [d for d in project_docs if getattr(d, 'doc_type', '') == 'drawing']
-        if drawing_docs:
+    # Load drawing context ONLY if question is about drawings
+    if question_about_drawings:
+        try:
+            drawing_docs = [d for d in project_docs if getattr(d, 'doc_type', '') == 'drawing']
             from app.services.blueprint_service import find_relevant_pages, build_drawing_metadata_context
             from app.services.hybrid_extraction import build_hybrid_context, should_use_vision
             from app.models.db_models import DocumentPage
             from PIL import Image
             import base64, io
 
-            for dd in drawing_docs[:3]:
+            for dd in drawing_docs[:2]:
                 metadata_ctx = await build_drawing_metadata_context(db, dd.id)
                 if metadata_ctx:
                     doc_context = (doc_context + "\n\nDRAWING INDEX:\n" + metadata_ctx) if doc_context else ("DRAWING INDEX:\n" + metadata_ctx)
 
-                relevant = await find_relevant_pages(db, dd.id, body.message, max_pages=3)
+                relevant = await find_relevant_pages(db, dd.id, body.message, max_pages=2)
 
-                # Hybrid extraction: get text data directly from PDF
                 if os.path.exists(dd.file_path):
                     hybrid_data = build_hybrid_context(dd.file_path, relevant)
                     if hybrid_data.get("text_context"):
-                        hybrid_text = f"\nDIRECTLY EXTRACTED DATA (doc_id: {dd.id}, high accuracy):\n{hybrid_data['text_context'][:6000]}"
+                        hybrid_text = f"\nDIRECTLY EXTRACTED DATA (doc_id: {dd.id}, high accuracy):\n{hybrid_data['text_context'][:4000]}"
                         doc_context = (doc_context + "\n" + hybrid_text) if doc_context else hybrid_text
 
                     use_vision = should_use_vision(hybrid_data.get("pdf_type", "raster"), body.message)
@@ -146,8 +141,18 @@ async def ask(
 
             if drawing_images:
                 logger.info("drawing_images_loaded", count=len(drawing_images))
+        except Exception as e:
+            logger.warning("drawing_load_error", error=str(e))
+
+    # Load synced integration data (fast)
+    try:
+        from app.integrations.sync_service import get_synced_items_for_project, build_synced_data_context
+        synced_items = await get_synced_items_for_project(db, ctx.org_id, None, limit=50)
+        if synced_items:
+            synced_context = build_synced_data_context(synced_items)
+            doc_context = (doc_context + "\n\n" + synced_context) if doc_context else synced_context
     except Exception as e:
-        logger.warning("drawing_load_error", error=str(e))
+        logger.warning("synced_data_load_error", error=str(e))
 
     # -- 2. Check cache (skip if files attached) --
     cached_response = None
