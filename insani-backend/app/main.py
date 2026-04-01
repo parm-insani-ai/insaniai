@@ -88,6 +88,21 @@ app.add_middleware(
 )
 app.add_middleware(RequestLoggingMiddleware)
 
+
+# -- Security headers middleware --
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # -- Register routers --
 app.include_router(auth.router)
 app.include_router(projects.router)
@@ -129,14 +144,18 @@ async def root():
     return {"app": "insani", "version": "1.0.0", "docs": "/docs"}
 
 
-# -- Admin endpoints --
+# -- Admin endpoints (auth required) --
+from app.middleware.auth import require_auth_context as _admin_auth
+from app.middleware.auth import AuthContext as _AdminCtx
+from fastapi import Depends as _Dep
+
 @app.get("/v1/admin/metrics")
-async def admin_metrics():
+async def admin_metrics(ctx: _AdminCtx = _Dep(_admin_auth)):
     return metrics.to_dict()
 
 
 @app.get("/v1/admin/scheduler")
-async def scheduler_status():
+async def scheduler_status(ctx: _AdminCtx = _Dep(_admin_auth)):
     """Get sync scheduler status and next sync times."""
     from app.services.scheduler import get_scheduler_status
     from app.db import async_session
@@ -179,7 +198,7 @@ async def scheduler_status():
 
 
 @app.post("/v1/admin/scheduler/pause")
-async def pause_scheduler():
+async def pause_scheduler(ctx: _AdminCtx = _Dep(_admin_auth)):
     """Pause the sync scheduler."""
     from app.services.scheduler import stop_scheduler
     await stop_scheduler()
@@ -187,7 +206,7 @@ async def pause_scheduler():
 
 
 @app.post("/v1/admin/scheduler/resume")
-async def resume_scheduler():
+async def resume_scheduler(ctx: _AdminCtx = _Dep(_admin_auth)):
     """Resume the sync scheduler."""
     from app.services.scheduler import start_scheduler
     start_scheduler()

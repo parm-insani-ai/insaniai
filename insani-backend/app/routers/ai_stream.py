@@ -14,14 +14,18 @@ from app.models.db_models import Project, ChatSession
 from app.models.schemas_chat import AiAskRequest
 from app.services import chat_service, ai_service, document_service
 from app.middleware.auth import require_auth_context, AuthContext
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import structlog
 
 logger = structlog.get_logger()
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/v1/ai", tags=["AI Streaming"])
 
 
 @router.post("/stream")
+@limiter.limit("20/minute")
 async def stream_ask(
     request: Request,
     body: AiAskRequest,

@@ -2,6 +2,35 @@
    CHAT — Message handling and session management.
    ═══════════════════════════════════════════════ */
 
+/**
+ * Sanitize HTML from AI responses to prevent XSS.
+ * Allows safe formatting tags, strips scripts, event handlers, iframes.
+ */
+function sanitizeHTML(html) {
+  var temp = document.createElement('div');
+  temp.innerHTML = html;
+  // Remove dangerous elements
+  var dangerous = temp.querySelectorAll('script,iframe,object,embed,form,input,textarea,select,button[type=submit],link,meta,base');
+  dangerous.forEach(function(el) { el.remove(); });
+  // Remove event handler attributes from all elements
+  var all = temp.querySelectorAll('*');
+  all.forEach(function(el) {
+    var attrs = Array.from(el.attributes);
+    attrs.forEach(function(attr) {
+      if (attr.name.startsWith('on') || attr.name === 'srcdoc' || attr.name === 'formaction') {
+        el.removeAttribute(attr.name);
+      }
+      if (attr.name === 'href' && attr.value.trim().toLowerCase().startsWith('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+      if (attr.name === 'src' && attr.value.trim().toLowerCase().startsWith('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return temp.innerHTML;
+}
+
 const IC = {
   search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
   dollar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
@@ -56,7 +85,7 @@ async function send() {
       onDone(data) {
         if (searchEl.parentNode) searchEl.remove();
         // Replace the streaming preview with the fully formatted HTML
-        aiBubble.innerHTML = data.full_response;
+        aiBubble.innerHTML = sanitizeHTML(data.full_response);
         scrollDown();
         loadRecentChats();
       },
@@ -191,7 +220,7 @@ function aiMsg(html) {
   const c = document.getElementById('chatInner');
   const d = document.createElement('div');
   d.className = 'msg ai';
-  d.innerHTML = '<div class="msg-av ai"></div><div class="msg-body"><div class="bubble">' + html + '</div></div>';
+  d.innerHTML = '<div class="msg-av ai"></div><div class="msg-body"><div class="bubble">' + sanitizeHTML(html) + '</div></div>';
   c.appendChild(d);
   requestAnimationFrame(scrollDown);
 }

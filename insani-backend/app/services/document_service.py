@@ -76,41 +76,47 @@ async def save_uploaded_file(
     return doc
 
 
+def _extract_pdf_pages_sync(file_path: str) -> list[dict]:
+    """CPU-bound PDF text extraction — runs in thread pool."""
+    import pypdf
+    reader = pypdf.PdfReader(file_path)
+    pages = []
+    char_offset = 0
+    for i, page in enumerate(reader.pages):
+        text = (page.extract_text() or "").strip()
+        pages.append({"page_number": i + 1, "text": text, "char_offset": char_offset})
+        char_offset += len(text)
+    return pages
+
+
 async def parse_pdf(db: AsyncSession, doc_id: int):
     """
     Extract text from a PDF page-by-page and store in DocumentPage rows.
-    Updates the document status to 'ready' when done.
-    
-    Uses PyPDF2 for extraction. For scanned PDFs (images), this will
-    extract no text — in production, add OCR via Tesseract or similar.
+    Runs CPU-bound extraction in a thread to avoid blocking the event loop.
     """
+    import asyncio
+
     result = await db.execute(select(Document).where(Document.id == doc_id))
     doc = result.scalar_one_or_none()
     if not doc:
         return
 
     try:
-        import pypdf
-        reader = pypdf.PdfReader(doc.file_path)
-        page_count = len(reader.pages)
+        # Run extraction in thread pool — doesn't block async event loop
+        pages_data = await asyncio.to_thread(_extract_pdf_pages_sync, doc.file_path)
 
-        char_offset = 0
-        for i, page in enumerate(reader.pages):
-            text = page.extract_text() or ""
-            text = text.strip()
-
+        for p in pages_data:
             page_obj = DocumentPage(
                 document_id=doc.id,
-                page_number=i + 1,
-                text_content=text,
-                char_offset=char_offset,
+                page_number=p["page_number"],
+                text_content=p["text"],
+                char_offset=p["char_offset"],
             )
             db.add(page_obj)
-            char_offset += len(text)
 
-        doc.page_count = page_count
+        doc.page_count = len(pages_data)
         doc.status = "ready"
-        logger.info("pdf_parsed", doc_id=doc.id, pages=page_count)
+        logger.info("pdf_parsed", doc_id=doc.id, pages=len(pages_data))
 
     except Exception as e:
         doc.status = "error"

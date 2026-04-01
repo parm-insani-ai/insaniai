@@ -10,11 +10,13 @@ DELETE /v1/documents/{id}       — Delete a document
 
 import os
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import structlog
 
 from app.db import get_db
@@ -23,6 +25,7 @@ from app.services import document_service
 from app.middleware.auth import require_auth_context, AuthContext
 
 logger = structlog.get_logger()
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/v1/documents", tags=["Documents"])
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB (blueprints can be large)
@@ -48,7 +51,9 @@ class DocumentDetailResponse(DocumentResponse):
 # ── Endpoints ──
 
 @router.post("/upload", response_model=DocumentResponse, status_code=201)
+@limiter.limit("10/minute")
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     project_id: int = Form(...),
     ctx: AuthContext = Depends(require_auth_context),
