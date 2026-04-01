@@ -45,7 +45,7 @@ class OutlookConnector(BaseConnector):
             client_secret=MS_CLIENT_SECRET,
             auth_url=MS_AUTH_URL,
             token_url=MS_TOKEN_URL,
-            scopes=["https://graph.microsoft.com/Mail.Read", "https://graph.microsoft.com/Calendars.Read", "https://graph.microsoft.com/User.Read", "offline_access"],
+            scopes=["Mail.Read", "Calendars.Read", "User.Read", "offline_access"],
             redirect_uri=MS_REDIRECT_URI,
         )
 
@@ -121,19 +121,6 @@ class OutlookConnector(BaseConnector):
     ) -> tuple[list[NormalizedItem], str]:
         headers = self._headers(access_token)
         items = []
-        
-        logger.info("outlook_debug_token", token_start=access_token[:20] if access_token else "EMPTY")
-        
-        # Decode JWT to check audience
-        try:
-            import base64, json as json_mod
-            parts = access_token.split(".")
-            if len(parts) >= 2:
-                payload = parts[1] + "=" * (4 - len(parts[1]) % 4)
-                decoded = json_mod.loads(base64.urlsafe_b64decode(payload))
-                logger.info("outlook_token_claims", aud=decoded.get("aud", ""), scp=decoded.get("scp", ""), iss=decoded.get("iss", "")[:50])
-        except Exception as e:
-            logger.warning("outlook_token_decode_error", error=str(e))
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:

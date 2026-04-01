@@ -213,11 +213,30 @@ class SharePointConnector(BaseConnector):
 
                 size_str = f"{size / 1024:.0f} KB" if size < 1048576 else f"{size / 1048576:.1f} MB"
 
+                # Extract text content for readable files
+                content_text = ""
+                readable_exts = ("txt", "csv", "md", "json", "xml")
+                if ext in readable_exts and size < 2 * 1024 * 1024:
+                    try:
+                        dl_resp = await client.get(
+                            f"{GRAPH_API_BASE}/drives/{drive_id}/items/{item['id']}/content",
+                            headers=headers,
+                            follow_redirects=True,
+                        )
+                        if dl_resp.status_code == 200:
+                            content_text = dl_resp.text[:3000]
+                    except Exception:
+                        pass
+
+                summary = f"SharePoint: {name} | Site: {site_name} | Library: {drive_name} | Size: {size_str}"
+                if content_text:
+                    summary += f"\nContent: {content_text[:500]}"
+
                 items.append(NormalizedItem(
                     external_id=f"sp-{item.get('id', '')}",
                     item_type=doc_type,
                     title=name,
-                    summary=f"SharePoint: {name} | Site: {site_name} | Library: {drive_name} | Size: {size_str}",
+                    summary=summary,
                     raw_data={"id": item.get("id"), "name": name, "drive_id": drive_id},
                     metadata={
                         "site": site_name,
