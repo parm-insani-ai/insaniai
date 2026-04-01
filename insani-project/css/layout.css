@@ -26,10 +26,12 @@
 }
 
 .sidebar-top {
-  padding: 1.25rem 1.15rem 0.85rem;
+  padding: 0.7rem 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
 }
 
 .sidebar-scroll {
