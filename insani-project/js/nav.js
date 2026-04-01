@@ -63,25 +63,74 @@ async function loadProjects() {
       activeProjectId = projects[0].id;
       activeProjectName = projects[0].name;
     }
+
+    // Update sidebar project picker
+    renderSidebarProjectMenu();
+    updateSidebarProjectName();
   } catch (e) {
     console.warn('Failed to load projects:', e.message);
   }
 }
 
-async function pickProject(id) {
+// ── Sidebar project picker ──
+
+function toggleSidebarProjectMenu() {
+  document.getElementById('sidebarProjectMenu').classList.toggle('open');
+}
+
+function renderSidebarProjectMenu() {
+  var container = document.getElementById('sidebarProjectList');
+  if (!container) return;
+
+  if (!allProjects.length) {
+    container.innerHTML = '<div class="sidebar-project-item" style="color:var(--text-dim);pointer-events:none">No projects</div>';
+    return;
+  }
+
+  container.innerHTML = allProjects.map(function(p) {
+    return '<div class="sidebar-project-item' + (p.id === activeProjectId ? ' active' : '') + '" onclick="switchProject(' + p.id + ')">' + esc(p.name) + '</div>';
+  }).join('');
+}
+
+function updateSidebarProjectName() {
+  var el = document.getElementById('sidebarProjectName');
+  if (el) el.textContent = activeProjectName || 'Select project';
+}
+
+async function switchProject(id) {
+  document.getElementById('sidebarProjectMenu').classList.remove('open');
   await selectProject(id);
+}
+
+async function createNewProject() {
+  document.getElementById('sidebarProjectMenu').classList.remove('open');
+  var name = prompt('Project name:');
+  if (!name || !name.trim()) return;
+
+  try {
+    await apiCreateProject(name.trim(), '', '', {});
+    await loadProjects();
+    // Select the newly created project (last one)
+    if (allProjects.length) {
+      await selectProject(allProjects[0].id);
+    }
+    showToast('Project created: ' + name.trim());
+  } catch (e) {
+    showToast('Failed to create project: ' + e.message);
+  }
 }
 
 async function selectProject(id) {
   activeProjectId = id;
   activeChatId = null;
 
-  // Update picker UI
+  // Update sidebar project picker
   const project = allProjects.find(p => p.id === id);
   if (project) {
     activeProjectName = project.name;
-    document.getElementById('projName').textContent = project.name;
   }
+  updateSidebarProjectName();
+  renderSidebarProjectMenu();
   document.querySelectorAll('.pm-item').forEach(el =>
     el.classList.toggle('active', parseInt(el.dataset.id) === id)
   );

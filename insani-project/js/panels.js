@@ -159,4 +159,9 @@ document.addEventListener('click', function(e) {
   var ub = document.getElementById('userBtn');
   var um = document.getElementById('userMenu');
   if (um && um.classList.contains('open') && !um.contains(e.target) && ub && !ub.contains(e.target)) um.classList.remove('open');
+
+  // Close sidebar project menu
+  var spm = document.getElementById('sidebarProjectMenu');
+  var spp = document.getElementById('sidebarProjectPicker');
+  if (spm && spm.classList.contains('open') && !spm.contains(e.target) && spp && !spp.contains(e.target)) spm.classList.remove('open');
 });

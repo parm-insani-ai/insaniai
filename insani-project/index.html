@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>insani — Construction AI Copilot</title>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tokens.css?v=15">
-  <link rel="stylesheet" href="css/layout.css?v=15">
-  <link rel="stylesheet" href="css/components.css?v=15">
-  <link rel="stylesheet" href="css/chat.css?v=15">
-  <link rel="stylesheet" href="css/panels.css?v=15">
-  <link rel="stylesheet" href="css/dashboard.css?v=15">
-  <link rel="stylesheet" href="css/responsive.css?v=15">
+  <link rel="stylesheet" href="css/tokens.css?v=17">
+  <link rel="stylesheet" href="css/layout.css?v=17">
+  <link rel="stylesheet" href="css/components.css?v=17">
+  <link rel="stylesheet" href="css/chat.css?v=17">
+  <link rel="stylesheet" href="css/panels.css?v=17">
+  <link rel="stylesheet" href="css/dashboard.css?v=17">
+  <link rel="stylesheet" href="css/responsive.css?v=17">
 </head>
 <body>
 
@@ -123,7 +123,15 @@
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-top">
-      <div class="sidebar-brand"><span class="brand-mark"></span> insani</div>
+      <div class="sidebar-project-picker" id="sidebarProjectPicker" onclick="toggleSidebarProjectMenu()">
+        <span class="sidebar-project-name" id="sidebarProjectName">My Project</span>
+        <span class="sidebar-project-arrow">&#9662;</span>
+      </div>
+      <div class="sidebar-project-menu" id="sidebarProjectMenu">
+        <div id="sidebarProjectList"></div>
+        <div class="sidebar-project-divider"></div>
+        <div class="sidebar-project-item sidebar-project-new" onclick="createNewProject()">+ New project</div>
+      </div>
       <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
@@ -160,13 +168,13 @@
       <!-- Discrepancy Reports -->
       <div class="sb-section">
         <div class="sb-label">Discrepancy Reports</div>
-        <div id="discrepancyList">
-          <div style="color:var(--text-dim);font-size:0.75rem;padding:0.3rem 0.6rem">No comparisons yet</div>
-        </div>
         <button class="agent-btn agent-btn-compare" onclick="showCompareModal()">
           <span class="agent-btn-icon">&#8644;</span>
           <span class="agent-btn-text">Compare Spec vs Submittal</span>
         </button>
+        <div id="discrepancyList" style="margin-top:0.3rem">
+          <div style="color:var(--text-dim);font-size:0.75rem;padding:0.3rem 0.6rem">No comparisons yet</div>
+        </div>
       </div>
 
       <!-- AI Agents -->
@@ -220,7 +228,7 @@
         <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <span class="topbar-brand">insani</span>
+        <div class="topbar-brand"><span class="brand-mark"></span> insani</div>
       </div>
       <div class="topbar-right">
         <button class="top-btn topbar-action-btn" onclick="showShareModal()" title="Share">
@@ -283,17 +291,17 @@
 </div>
 
 <!-- Scripts -->
-<script src="js/data.js?v=15"></script>
-<script src="js/api.js?v=15"></script>
-<script src="js/chat.js?v=15"></script>
-<script src="js/files.js?v=15"></script>
-<script src="js/panels.js?v=15"></script>
-<script src="js/documents.js?v=15"></script>
-<script src="js/drawings.js?v=15"></script>
-<script src="js/discrepancies.js?v=15"></script>
-<script src="js/agents.js?v=15"></script>
-<script src="js/integrations.js?v=15"></script>
-<script src="js/nav.js?v=15"></script>
-<script src="js/main.js?v=15"></script>
+<script src="js/data.js?v=17"></script>
+<script src="js/api.js?v=17"></script>
+<script src="js/chat.js?v=17"></script>
+<script src="js/files.js?v=17"></script>
+<script src="js/panels.js?v=17"></script>
+<script src="js/documents.js?v=17"></script>
+<script src="js/drawings.js?v=17"></script>
+<script src="js/discrepancies.js?v=17"></script>
+<script src="js/agents.js?v=17"></script>
+<script src="js/integrations.js?v=17"></script>
+<script src="js/nav.js?v=17"></script>
+<script src="js/main.js?v=17"></script>
 </body>
 </html>

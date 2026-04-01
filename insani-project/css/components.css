@@ -7,21 +7,67 @@
    ═══════════════════════════════════════════════ */
 
 /* ── Brand mark ── */
-.sidebar-brand {
-  display: flex; align-items: center; gap: 0.55rem;
-  font-weight: 600; font-size: 1rem; letter-spacing: -0.03em;
-}
 .brand-mark {
-  width: 26px; height: 26px;
+  width: 22px; height: 22px;
   background: var(--text);
-  border-radius: 7px;
+  border-radius: 6px;
   display: grid; place-items: center;
+  flex-shrink: 0;
 }
 .brand-mark::after {
   content: '';
-  width: 9px; height: 9px;
-  border: 2px solid var(--bg-sidebar);
+  width: 8px; height: 8px;
+  border: 2px solid var(--bg);
   border-radius: 50%;
+}
+
+/* ── Sidebar project picker (replaces logo) ── */
+.sidebar-project-picker {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.12s; flex: 1; min-width: 0;
+  font-weight: 600; font-size: 0.88rem;
+  color: var(--text); letter-spacing: -0.02em;
+}
+.sidebar-project-picker:hover { background: var(--surface); }
+.sidebar-project-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1;
+}
+.sidebar-project-arrow {
+  font-size: 0.65rem; color: var(--text-dim);
+  transition: transform 0.15s;
+}
+
+.sidebar-project-menu {
+  display: none; position: absolute;
+  top: 100%; left: 0.5rem; right: 0.5rem;
+  background: var(--bg-chat); border: 1px solid var(--border-strong);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  padding: 4px; z-index: 200;
+  max-height: 250px; overflow-y: auto;
+}
+.sidebar-project-menu.open { display: block; }
+
+.sidebar-project-item {
+  padding: 0.45rem 0.65rem; border-radius: 7px;
+  font-size: 0.8rem; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.12s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-project-item:hover { background: var(--surface); color: var(--text); }
+.sidebar-project-item.active { background: var(--surface); font-weight: 500; color: var(--text); }
+.sidebar-project-new { color: var(--text-muted); font-size: 0.75rem; }
+.sidebar-project-divider { height: 1px; background: var(--border); margin: 3px 0; }
+
+.sidebar-top { position: relative; }
+
+/* ── Topbar brand ── */
+.topbar-brand {
+  display: flex; align-items: center; gap: 0.45rem;
+  font-weight: 600; font-size: 0.95rem; letter-spacing: -0.03em;
+  color: var(--text);
 }
 
 /* ── Sidebar collapse button ── */
