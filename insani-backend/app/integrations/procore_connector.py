@@ -27,12 +27,12 @@ logger = structlog.get_logger()
 # Production URLs
 PROCORE_AUTH_URL = "https://login.procore.com/oauth/authorize"
 PROCORE_TOKEN_URL = "https://login.procore.com/oauth/token"
-PROCORE_API_BASE = "https://api.procore.com/rest/v1.1"
+PROCORE_API_BASE = "https://api.procore.com/rest/v1.0"
 
 # Sandbox URLs
 PROCORE_SANDBOX_AUTH_URL = "https://login-sandbox.procore.com/oauth/authorize"
 PROCORE_SANDBOX_TOKEN_URL = "https://login-sandbox.procore.com/oauth/token"
-PROCORE_SANDBOX_API_BASE = "https://sandbox.procore.com/rest/v1.1"
+PROCORE_SANDBOX_API_BASE = "https://sandbox.procore.com/rest/v1.0"
 
 PROCORE_CLIENT_ID = os.getenv("PROCORE_CLIENT_ID", "")
 PROCORE_CLIENT_SECRET = os.getenv("PROCORE_CLIENT_SECRET", "")
