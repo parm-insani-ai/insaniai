@@ -160,9 +160,20 @@ function fmtT(d) {
 async function connectIntegration(provider) {
   try {
     var data = await apiFetch('/v1/integrations/connect/' + provider);
-    if (!data.auth_url) return;
+    if (!data.auth_url) {
+      showToast('OAuth not configured for this integration');
+      return;
+    }
     var w=600, h=700;
     var popup = window.open(data.auth_url, 'insani_oauth', 'width='+w+',height='+h+',left='+(screen.width-w)/2+',top='+(screen.height-h)/2+',toolbar=no,menubar=no');
+
+    // Fallback if popup was blocked — redirect in same window
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      showToast('Popup blocked — redirecting...');
+      window.location.href = data.auth_url;
+      return;
+    }
+
     var poll = setInterval(function() {
       try {
         if (!popup || popup.closed) { clearInterval(poll); setTimeout(function(){ loadDashboard(); updateSidebarSources(); }, 1000); }
@@ -173,7 +184,7 @@ async function connectIntegration(provider) {
         }
       } catch(e) {}
     }, 500);
-  } catch(e) { showToast('Failed to connect'); }
+  } catch(e) { showToast('Failed to connect: ' + e.message); }
 }
 
 async function disconnectIntegration(provider) {
