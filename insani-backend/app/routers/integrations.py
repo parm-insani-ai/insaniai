@@ -132,6 +132,85 @@ async def disconnect(
     return {"disconnected": provider}
 
 
+@router.get("/test/{provider}")
+async def test_connection(
+    provider: str,
+    ctx: AuthContext = Depends(require_auth_context),
+    db: AsyncSession = Depends(get_db),
+):
+    """Test an integration connection — verifies OAuth token works and connector is reachable."""
+    from app.integrations.registry import get_connector
+
+    conn = await oauth_service.get_connection(db, ctx.org_id, provider)
+    if not conn:
+        raise HTTPException(status_code=404, detail=f"No connection for {provider}")
+    if conn.status != "connected":
+        return {"provider": provider, "reachable": False, "error": f"Connection is {conn.status}"}
+
+    connector = get_connector(provider)
+    if not connector:
+        return {"provider": provider, "reachable": False, "error": f"No connector for {provider}"}
+
+    try:
+        access_token = await oauth_service.get_valid_access_token(db, conn)
+        reachable = await connector.test_connection(access_token)
+        account_info = {}
+        if reachable:
+            try:
+                account_info = await connector.get_account_info(access_token)
+            except Exception:
+                pass
+        return {
+            "provider": provider,
+            "reachable": reachable,
+            "account": account_info,
+            "external_account": conn.external_account,
+            "last_sync_at": str(conn.last_sync_at) if conn.last_sync_at else None,
+            "last_sync_status": conn.last_sync_status,
+        }
+    except Exception as e:
+        return {"provider": provider, "reachable": False, "error": str(e)[:200]}
+
+
+@router.get("/data/{provider}")
+async def get_synced_data(
+    provider: str,
+    limit: int = 25,
+    ctx: AuthContext = Depends(require_auth_context),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the actual synced data items for a provider — used for verifying sync quality."""
+    from app.models.db_models import SyncedItem
+    from sqlalchemy import select, desc
+
+    result = await db.execute(
+        select(SyncedItem)
+        .where(SyncedItem.org_id == ctx.org_id, SyncedItem.provider == provider)
+        .order_by(desc(SyncedItem.synced_at))
+        .limit(limit)
+    )
+    items = list(result.scalars().all())
+
+    return {
+        "provider": provider,
+        "total": len(items),
+        "items": [
+            {
+                "id": i.id,
+                "item_type": i.item_type,
+                "external_id": i.external_id,
+                "title": i.title,
+                "summary": i.summary[:300] if i.summary else "",
+                "metadata": i.metadata_json or {},
+                "source_url": i.source_url,
+                "item_date": str(i.item_date) if i.item_date else None,
+                "synced_at": str(i.synced_at) if i.synced_at else None,
+            }
+            for i in items
+        ],
+    }
+
+
 @router.get("/dashboard/stats")
 async def dashboard_stats(
     ctx: AuthContext = Depends(require_auth_context),

@@ -139,6 +139,8 @@ function tile(provider, on) {
   // Actions
   h += '<div class="ds-tile-actions">';
   if (on) {
+    h += '<button class="ds-btn ds-btn-light" onclick="event.stopPropagation();testConnection(\'' + provider.provider + '\')">Test</button>';
+    h += '<button class="ds-btn ds-btn-light" onclick="event.stopPropagation();viewSyncedData(\'' + provider.provider + '\')">View data</button>';
     h += '<button class="ds-btn ds-btn-light" onclick="event.stopPropagation();syncIntegration(\'' + provider.provider + '\')">Sync</button>';
     h += '<button class="ds-btn ds-btn-ghost" onclick="event.stopPropagation();disconnectIntegration(\'' + provider.provider + '\')">×</button>';
   } else {
@@ -195,6 +197,70 @@ async function syncAll() {
   showToast('Syncing all…');
   try { await apiFetch('/v1/integrations/sync-all', {method:'POST'}); showToast('All synced'); await loadDashboard(); }
   catch(e) { showToast('Sync failed'); }
+}
+
+async function testConnection(provider) {
+  var label = (PROVIDER_BRANDS[provider]||{}).label || provider;
+  showToast('Testing ' + label + '...');
+  try {
+    var result = await apiFetch('/v1/integrations/test/' + provider);
+    var msg = '';
+    if (result.reachable) {
+      msg = '<p style="color:var(--green);font-weight:600">✓ ' + esc(label) + ' is reachable</p>';
+      if (result.account && result.account.email) msg += '<p><strong>Account:</strong> ' + esc(result.account.email) + '</p>';
+      if (result.account && result.account.name) msg += '<p><strong>Name:</strong> ' + esc(result.account.name) + '</p>';
+      if (result.last_sync_at) msg += '<p><strong>Last sync:</strong> ' + esc(result.last_sync_at) + '</p>';
+      if (result.last_sync_status) msg += '<p><strong>Last status:</strong> ' + esc(result.last_sync_status) + '</p>';
+    } else {
+      msg = '<p style="color:var(--red);font-weight:600">✗ ' + esc(label) + ' not reachable</p>';
+      if (result.error) msg += '<p><strong>Error:</strong> ' + esc(result.error) + '</p>';
+    }
+    showIntegrationModal(label + ' — Connection Test', msg);
+  } catch(e) {
+    showToast('Test failed: ' + e.message);
+  }
+}
+
+async function viewSyncedData(provider) {
+  var label = (PROVIDER_BRANDS[provider]||{}).label || provider;
+  showToast('Loading ' + label + ' data...');
+  try {
+    var result = await apiFetch('/v1/integrations/data/' + provider + '?limit=25');
+    var msg = '<p><strong>' + result.total + '</strong> recent items synced from ' + esc(label) + '</p>';
+    if (!result.items.length) {
+      msg += '<p style="color:var(--text-dim)">No items synced yet. Click "Sync" to pull data.</p>';
+    } else {
+      msg += '<div style="max-height:60vh;overflow-y:auto;margin-top:0.5rem">';
+      result.items.forEach(function(it) {
+        msg += '<div style="padding:0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem">';
+        msg += '<div style="font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;margin-bottom:0.15rem">' + esc(it.item_type) + '</div>';
+        msg += '<div style="font-weight:500;font-size:0.85rem;margin-bottom:0.25rem">' + esc(it.title || '(no title)') + '</div>';
+        if (it.summary) msg += '<div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.4">' + esc(it.summary) + '</div>';
+        if (it.source_url) msg += '<div style="margin-top:0.3rem"><a href="' + esc(it.source_url) + '" target="_blank" style="font-size:0.7rem;color:var(--blue)">Open in ' + esc(label) + ' →</a></div>';
+        if (it.item_date) msg += '<div style="font-size:0.65rem;color:var(--text-dim);font-family:var(--mono);margin-top:0.2rem">' + esc(it.item_date) + '</div>';
+        msg += '</div>';
+      });
+      msg += '</div>';
+    }
+    showIntegrationModal(label + ' — Synced Data', msg);
+  } catch(e) {
+    showToast('Failed to load data: ' + e.message);
+  }
+}
+
+function showIntegrationModal(title, bodyHtml) {
+  var html = '<div class="agent-modal-inner">' +
+    '<div class="agent-modal-header"><h3>' + esc(title) + '</h3><button class="dv-close" onclick="closeIntegrationModal()">&#10005;</button></div>' +
+    '<div style="font-size:0.82rem;color:var(--text-secondary)">' + bodyHtml + '</div>' +
+    '<div style="display:flex;justify-content:flex-end;margin-top:1rem">' +
+    '<button class="disc-btn disc-btn-cancel" onclick="closeIntegrationModal()">Close</button>' +
+    '</div></div>';
+  document.getElementById('integrationModal').innerHTML = html;
+  document.getElementById('integrationModal').classList.add('open');
+}
+
+function closeIntegrationModal() {
+  document.getElementById('integrationModal').classList.remove('open');
 }
 
 // ═══ VIEW ═══
