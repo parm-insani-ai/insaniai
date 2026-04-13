@@ -291,7 +291,12 @@ function showIntegrations() {
 function checkIntegrationCallback() {
   var p = new URLSearchParams(window.location.search);
   if (p.get('integration_connected')) { showToast((PROVIDER_BRANDS[p.get('integration_connected')]||{}).label+' connected!'); window.history.replaceState({},'',window.location.pathname); updateSidebarSources(); }
-  if (p.get('integration_error')) { showToast('Integration error'); window.history.replaceState({},'',window.location.pathname); }
+  if (p.get('integration_error')) {
+    var err = p.get('integration_error');
+    showToast('Integration error: ' + err);
+    console.error('OAuth callback error:', err);
+    window.history.replaceState({},'',window.location.pathname);
+  }
 }
 
 // ═══ SIDEBAR ═══
