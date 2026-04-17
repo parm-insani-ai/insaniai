@@ -142,25 +142,31 @@ class OutlookConnector(BaseConnector):
         items = []
         try:
             params = {
-                "$top": 50,
+                "$top": 100,
                 "$orderby": "receivedDateTime desc",
                 "$select": "id,subject,from,toRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink",
             }
             if since:
                 params["$filter"] = f"receivedDateTime ge {since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
-            resp = await client.get(
-                f"{GRAPH_API_BASE}/me/messages",
-                headers=headers,
-                params=params,
-            )
-            
-            if resp.status_code != 200:
-                www_auth = resp.headers.get("www-authenticate", "")
-                logger.error("outlook_email_debug", status=resp.status_code, body=resp.text[:500], www_auth=www_auth[:500])
-                return items
+            # Paginate through emails (up to 3 pages = 300 emails max)
+            next_link = f"{GRAPH_API_BASE}/me/messages"
+            for page in range(3):
+                if not next_link:
+                    break
 
-            for msg in resp.json().get("value", []):
+                if page == 0:
+                    resp = await client.get(next_link, headers=headers, params=params)
+                else:
+                    resp = await client.get(next_link, headers=headers)
+
+                if resp.status_code != 200:
+                    www_auth = resp.headers.get("www-authenticate", "")
+                    logger.error("outlook_email_debug", status=resp.status_code, body=resp.text[:500], www_auth=www_auth[:500])
+                    break
+
+                data = resp.json()
+                for msg in data.get("value", []):
                 from_addr = msg.get("from", {}).get("emailAddress", {}).get("address", "")
                 from_name = msg.get("from", {}).get("emailAddress", {}).get("name", "")
                 to_list = [r.get("emailAddress", {}).get("address", "") for r in msg.get("toRecipients", [])]
@@ -186,6 +192,11 @@ class OutlookConnector(BaseConnector):
                     item_date=self._parse_date(msg.get("receivedDateTime")),
                     project_hint=subject,
                 ))
+
+                # Get next page link
+                next_link = data.get("@odata.nextLink", None)
+
+            logger.info("outlook_emails_fetched", count=len(items))
         except Exception as e:
             logger.warning("outlook_email_error", error=str(e))
         return items
@@ -195,7 +206,7 @@ class OutlookConnector(BaseConnector):
         try:
             now = datetime.utcnow()
             params = {
-                "$top": 30,
+                "$top": 100,
                 "$orderby": "start/dateTime desc",
                 "$select": "id,subject,organizer,start,end,location,bodyPreview,webLink,attendees",
             }
