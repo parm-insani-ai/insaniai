@@ -58,6 +58,7 @@ class OutlookConnector(BaseConnector):
             "scope": " ".join(config.scopes),
             "state": state,
             "response_mode": "query",
+            "prompt": "login",
         }
         return f"{MS_AUTH_URL}?{urlencode(params)}"
 
