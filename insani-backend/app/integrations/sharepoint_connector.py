@@ -22,8 +22,8 @@ from app.integrations.base import BaseConnector, OAuthConfig, NormalizedItem
 
 logger = structlog.get_logger()
 
-MS_AUTH_URL = "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize"
-MS_TOKEN_URL = "https://login.microsoftonline.com/organizations/oauth2/v2.0/token"
+MS_AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+MS_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
 
 SP_CLIENT_ID = os.getenv("SHAREPOINT_CLIENT_ID", os.getenv("MICROSOFT_CLIENT_ID", ""))
