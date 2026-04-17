@@ -22,32 +22,26 @@ def _load_connectors():
     if _connectors:
         return
 
-    from app.integrations.gmail_connector import GmailConnector
-    _connectors["gmail"] = GmailConnector()
+    _safe_load("gmail", "app.integrations.gmail_connector", "GmailConnector")
+    _safe_load("quickbooks", "app.integrations.quickbooks_connector", "QuickBooksConnector")
+    _safe_load("procore", "app.integrations.procore_connector", "ProcoreConnector")
+    _safe_load("autodesk", "app.integrations.autodesk_connector", "AutodeskConnector")
+    _safe_load("outlook", "app.integrations.outlook_connector", "OutlookConnector")
+    _safe_load("dropbox", "app.integrations.dropbox_connector", "DropboxConnector")
+    _safe_load("sharepoint", "app.integrations.sharepoint_connector", "SharePointConnector")
+    _safe_load("primavera", "app.integrations.primavera_connector", "PrimaveraConnector")
+    _safe_load("sage", "app.integrations.sage_connector", "SageConnector")
 
-    from app.integrations.quickbooks_connector import QuickBooksConnector
-    _connectors["quickbooks"] = QuickBooksConnector()
 
-    from app.integrations.procore_connector import ProcoreConnector
-    _connectors["procore"] = ProcoreConnector()
-
-    from app.integrations.autodesk_connector import AutodeskConnector
-    _connectors["autodesk"] = AutodeskConnector()
-
-    from app.integrations.outlook_connector import OutlookConnector
-    _connectors["outlook"] = OutlookConnector()
-
-    from app.integrations.dropbox_connector import DropboxConnector
-    _connectors["dropbox"] = DropboxConnector()
-
-    from app.integrations.sharepoint_connector import SharePointConnector
-    _connectors["sharepoint"] = SharePointConnector()
-
-    from app.integrations.primavera_connector import PrimaveraConnector
-    _connectors["primavera"] = PrimaveraConnector()
-
-    from app.integrations.sage_connector import SageConnector
-    _connectors["sage"] = SageConnector()
+def _safe_load(name, module_path, class_name):
+    try:
+        import importlib
+        mod = importlib.import_module(module_path)
+        cls = getattr(mod, class_name)
+        _connectors[name] = cls()
+    except Exception as e:
+        import structlog
+        structlog.get_logger().error("connector_load_failed", connector=name, error=str(e))
 
 
 def get_connector(provider: str) -> BaseConnector | None:
