@@ -167,31 +167,31 @@ class OutlookConnector(BaseConnector):
 
                 data = resp.json()
                 for msg in data.get("value", []):
-                from_addr = msg.get("from", {}).get("emailAddress", {}).get("address", "")
-                from_name = msg.get("from", {}).get("emailAddress", {}).get("name", "")
-                to_list = [r.get("emailAddress", {}).get("address", "") for r in msg.get("toRecipients", [])]
-                subject = msg.get("subject", "(no subject)")
-                body_preview = msg.get("bodyPreview", "")
-                web_link = msg.get("webLink", "")
+                    from_addr = msg.get("from", {}).get("emailAddress", {}).get("address", "")
+                    from_name = msg.get("from", {}).get("emailAddress", {}).get("name", "")
+                    to_list = [r.get("emailAddress", {}).get("address", "") for r in msg.get("toRecipients", [])]
+                    subject = msg.get("subject", "(no subject)")
+                    body_preview = msg.get("bodyPreview", "")
+                    web_link = msg.get("webLink", "")
 
-                summary = f"From: {from_name} <{from_addr}>\nTo: {', '.join(to_list)}\n{body_preview}"
+                    summary = f"From: {from_name} <{from_addr}>\nTo: {', '.join(to_list)}\n{body_preview}"
 
-                items.append(NormalizedItem(
-                    external_id=f"outlook-{msg['id'][:50]}",
-                    item_type="email",
-                    title=subject,
-                    summary=summary,
-                    raw_data={"id": msg["id"], "subject": subject, "from": from_addr},
-                    metadata={
-                        "from": from_addr,
-                        "from_name": from_name,
-                        "to": to_list,
-                        "has_attachments": msg.get("hasAttachments", False),
-                    },
-                    source_url=web_link,
-                    item_date=self._parse_date(msg.get("receivedDateTime")),
-                    project_hint=subject,
-                ))
+                    items.append(NormalizedItem(
+                        external_id=f"outlook-{msg['id'][:50]}",
+                        item_type="email",
+                        title=subject,
+                        summary=summary,
+                        raw_data={"id": msg["id"], "subject": subject, "from": from_addr},
+                        metadata={
+                            "from": from_addr,
+                            "from_name": from_name,
+                            "to": to_list,
+                            "has_attachments": msg.get("hasAttachments", False),
+                        },
+                        source_url=web_link,
+                        item_date=self._parse_date(msg.get("receivedDateTime")),
+                        project_hint=subject,
+                    ))
 
                 # Get next page link
                 next_link = data.get("@odata.nextLink", None)
